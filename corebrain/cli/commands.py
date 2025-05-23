@@ -381,7 +381,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             cli_ui_path = corebrain_root / "CLI-UI"
             client_path = cli_ui_path / "client"
             server_path = cli_ui_path / "server"
-            api_path = corebrain_root / "wrappers" / "csharp_cli_api"
+            api_path = corebrain_root / "wrappers" / "csharp_cli_api" / "src" / "CorebrainCLIAPI"
 
             # Path validation
             if not client_path.exists():
