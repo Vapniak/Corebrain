@@ -36,7 +36,6 @@ class NoSQLConnector(DatabaseConnector):
       super().__init__(config)
 
       self.conn = None
-      self.cursor = None
       self.engine = config.get("engine", "").lower()
       self.config = config
       self.connection_timeout = 30 # seconds
@@ -61,7 +60,6 @@ class NoSQLConnector(DatabaseConnector):
           Args:
             self.engine (str): Name of the database.
         '''
-
         try:
 
             start_time = time.time()
@@ -69,85 +67,91 @@ class NoSQLConnector(DatabaseConnector):
             while time.time() - start_time < self.connection_timeout:
                 try:
                     if self.engine == "mongodb":
+                        # Checking if pymongo is imported
                         if not PYMONGO_IMPORTED:
                             raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
-                        if not 
+                        
+                        # Construction of the MongoDB connection
+                        if "connection_string" in self.config:
 
+                            # Check if connection string is provided
+                            connection_string = self.config["connection_string"]
 
+                            if "connectTimeoutMS=" not in connection_string:
+                                if "?" in connection_string:
+                                    connection_string += "&connectTimeoutMS=10000"
+                                else:
+                                    connection_string += "?connectTimeoutMS=10000"
+                            # Connecting to MongoDB using the connection string
+                            self.client = pymongo.MongoClient(connection_string)
 
-        '''
-        match self.engine:
-            case "mongodb":
-                if not PYMONGO_IMPORTED:
-                    raise ImportError("Pymongo is not installed. Please install it to use MongoDB connector.")
-                try:
-                    start_time = time.time()
-                    # Check if connection string is provided
-                    if "connection_string" in self.config:
-                        connection_string = self.config["connection_string"]
-                        if "connectTimeoutMS=" not in connection_string:
-                            if "?" in connection_string:
-                                connection_string += "&connectTimeoutMS=10000"
-                            else:
-                                connection_string += "?connectTimeoutMS=10000"
-                        self.client = pymongo.MongoClient(connection_string)
+                        else:
+                            # Setup for MongoDB connection parameters
+                            mongo_params = {
+                                "host": self.config.get("host", "localhost"),
+                                "port": int(self.config.get("port", 27017)),
+                                # 10000 = 10 seconds
+                                "connectTimeoutMS": 10000,
+                                "serverSelectionTimeoutMS": 10000,
+                            }
+
+                            # Required parameters
+                            if self.config.get("user"):
+                                mongo_params["username"] = self.config["user"]
+                            if self.config.get("password"):
+                                mongo_params["password"] = self.config["password"]
+
+                            # Optional parameters
+                            if self.config.get("authSource"):
+                                mongo_params["authSource"] = self.config["authSource"]
+                            if self.config.get("authMechanism"):
+                                mongo_params["authMechanism"] = self.config["authMechanism"]
+
+                            # Insert parameters for MongoDB
+                            self.client = pymongo.MongoClient(**mongo_params)
+                    #
+                    # If adding new db add thru self.engine variable
+                    #
                     else:
+                        raise ValueError(f"Unsupported NoSQL database: {self.engine}")             
+                    if self.conn:
+                        if self.engine == "mongodb":
+                            # Testing connection for MongoDB
+                            self.client.admin.command('ping')
 
-                        # Setup for MongoDB connection parameters
-
-                        mongo_params = {
-                            "host": self.config.get("host", "localhost"),
-                            "port": int(self.config.get("port", 27017)),
-                            "connection_timeoutMS": 10000,
-                            "serverSelectionTimeoutMS": 10000,
-                        }
-
-                        # Required parameters
-
-                        if self.config.get("user"):
-                            mongo_params["username"] = self.config["user"]
-                        if self.config.get("password"):
-                            mongo_params["password"] = self.config["password"]
-
-                        #Optional parameters
-
-                        if self.config.get("authSource"):
-                            mongo_params["authSource"] = self.config["authSource"]
-                        if self.config.get("authMechanism"):
-                            mongo_params["authMechanism"] = self.config["authMechanism"]
-
-                        # Insert parameters for MongoDB
-                        self.client = pymongo.MongoClient(**mongo_params)
-                    # Ping test for DB connection
-                    self.client.admin.command('ping')
-
-                    db_name = self.config.get("database", "")
-
-                    if not db_name:
-                        db_names = self.client.list_database_names()
-                        if not db_names:
-                            raise ValueError("No database names found in the MongoDB server.")
-                        system_dbs = ["admin", "local", "config"]
-                        for name in db_names:
-                            if name not in system_dbs:
-                                db_name = name
-                                break
-                        if not db_name:
-                            db_name = db_names[0]
-                        print(f"Not specified database name. Using the first available database: {db_name}")
-                    self.db = self.client[db_name]
-                    return True
+                            # If connection is successful, set the database
+                            db_name = self.config.get("database", "")
+                            if not db_name:
+                                # If database name is not specified, use the first available database
+                                db_names = self.client.list_database_names()
+                                if not db_names:
+                                    raise ValueError("No database names found in the MongoDB server.")
+                                # Exclude system database (MongoDB) from the list
+                                system_dbs = ["admin", "local", "config"]
+                                for name in db_names:
+                                    if name not in system_dbs:
+                                        db_name = name
+                                        break
+                                if not db_name:
+                                    db_name = db_names[0]
+                                print(f"Not specified database name. Using the first available database: {db_name}")
+                            # Connect to the specified database
+                            self.db = self.client[db_name]
+                            return True
+                        else:
+                            # If the engine is not Supported, raise an error
+                            raise ValueError(f"Unsupported NoSQL database: {self.engine}")
                 except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+                    # If connection fails, check if timeout is reached
                     if time.time() - start_time > self.connection_timeout:
-                        print(f"Connection to MongoDB timed out after {self.connection_timeout} seconds.")
-                        time.sleep(2) 
+                        print(f"Connection to {self.engine} timed out after {self.connection_timeout} seconds.")
+                        time.sleep(2)
                         self.close()
                         return False
-            # Add case when is needed new DB type
-            case _ :
-              raise ValueError(f"Unsupported NoSQL database: {self.engine}")
-        pass
-        '''
+        except Exception as e:
+            # If cannot connect to the database, print the error
+            print(f"Error connecting to {self.engine}: {e}")
+            return False
 
     def extract_schema(self, sample_limit: int = 5, collection_limit: Optional[int] = None, 
                       progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
@@ -160,7 +164,33 @@ class NoSQLConnector(DatabaseConnector):
         Returns:
             Dict[str, Any]: Extracted schema information.
         '''
+        if not self.client and not self.connect():
+            return {
+                "type": self.engine,
+                "tables": {},
+                "tables_list": []
+            }
+        
+        schema = {
+            "type": self.engine,
+            "database": self.db.name,
+            "tables": {},  # Depends on DB
+        }
 
+        match self.engine:
+            case "mongodb":
+                if not PYMONGO_IMPORTED:
+                    raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
+                try:
+                    import corebrain.db.connectors.subconnectors.mongodb as mongodb_subconnector
+                    return mongodb_subconnector.extract_schema(self, sample_limit, collection_limit, progress_callback)
+                except ImportError:
+                    raise ImportError("Failed to import MongoDB subconnector. Please ensure it is installed correctly.")
+            # If adding new db add thru self.engine variable          
+            # Add case when is needed new DB type
+            case _:
+                return schema
+        '''
         match self.engine:
             case "mongodb":
                 if not PYMONGO_IMPORTED:
@@ -236,6 +266,7 @@ class NoSQLConnector(DatabaseConnector):
             # Add case when is needed new DB type
             case _ :
               raise ValueError(f"Unsupported NoSQL database: {self.engine}")
+        '''
     def _extract_document_fields(self, doc: Dict[str, Any], fields: Dict[str, str], 
                                 prefix: str = "", max_depth: int = 3, current_depth: int = 0) -> None:
             '''
