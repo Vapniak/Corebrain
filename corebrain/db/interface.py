@@ -29,7 +29,7 @@ class DatabaseConnector(ABC):
         """Closes the connection."""
         pass
 
-# Posteriormente se podrían implementar conectores específicos:
+# Specific connectors could be implemented later:
 # - SQLiteConnector
 # - MySQLConnector
 # - PostgresConnector

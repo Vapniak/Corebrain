@@ -213,7 +213,7 @@ class ConfigEncrypter:
         input_path = Path(input_path)
         
         if not output_path:
-            # Si termina en .enc, quitar esa extensión
+            # If it ends in .enc, remove that extension
             if input_path.suffix == '.enc':
                 output_path = input_path.with_suffix('')
             else:
@@ -245,17 +245,17 @@ class ConfigEncrypter:
         """
         key_path = Path(key_path)
         
-        # Crear directorio padre si no existe
+        # Create parent directory if it does not exist
         key_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Generar clave
+        # Generate key
         key = Fernet.generate_key()
         
-        # Guardar clave
+        # Save key
         with open(key_path, 'wb') as f:
             f.write(key)
         
-        # Establecer permisos restrictivos
+        # Set restrictive permissions
         try:
             os.chmod(key_path, 0o600)
         except Exception as e:
