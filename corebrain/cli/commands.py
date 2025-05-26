@@ -17,7 +17,6 @@ from corebrain.cli.config import configure_sdk, get_api_credential
 from corebrain.cli.utils import print_colored
 from corebrain.config.manager import ConfigManager
 from corebrain.config.manager import export_config
-from corebrain.config.manager import validate_config
 from corebrain.lib.sso.auth import GlobodainSSOAuth
 
 def main_cli(argv: Optional[List[str]] = None) -> int:
@@ -57,7 +56,6 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--woami",action="store_true",help="Display information about the current user")
         parser.add_argument("--check-status",action="store_true",help="Checks status of task")
         parser.add_argument("--task-id",help="ID of the task to check status for")
-        parser.add_argument("--validate-config",action="store_true",help="Validates the selected configuration without executing any operations")
         parser.add_argument("--test-connection",action="store_true",help="Tests the connection to the Corebrain API using the provide credentials")
         parser.add_argument("--export-config",action="store_true",help="Exports the current configuration to a file")
         parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
@@ -307,7 +305,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("❌ Some system checks failed. Please review the issues above.", "red")
                 return 1
 
-        if args.configure or args.list_configs or args.show_schema:
+        if args.configure or args.list_configs:
             """
             Configure, list or show schema of the configured database.
 
