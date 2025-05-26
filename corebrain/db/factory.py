@@ -23,7 +23,10 @@ def get_connector(db_config: Dict[str, Any], timeout: int = 10) -> DatabaseConne
     
     if db_type == "sql":
         return SQLConnector(db_config, timeout)
-    elif db_type in ["nosql", "mongodb"] or engine == "mongodb":
-        return MongoDBConnector(db_config, timeout)
+    elif db_type == "nosql":
+        if engine == "mongodb":
+            return MongoDBConnector(db_config, timeout)
+        else:
+            raise ValueError(f"Unsupported NoSQL engine: {engine}")
     else:
-        raise ValueError(f"Tipo de base de datos no soportado: {db_type}")
+        raise ValueError(f"Unsupported database type: {db_type}")
