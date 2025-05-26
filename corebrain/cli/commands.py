@@ -85,7 +85,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 return None, None
         
 
-        # Show version
+
         if args.version:
             """
             Show the library version.
