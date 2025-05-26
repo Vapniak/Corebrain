@@ -4,6 +4,7 @@ Configuration manager for the Corebrain SDK.
 
 import json
 import uuid
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from cryptography.fernet import Fernet
@@ -40,20 +41,6 @@ def export_config(filepath="config.json"):
     with open(filepath, "w") as f:
         json.dump(config, f, indent=4)
     print(f"Configuration exported to {filepath}")
-
-# Validates that a configuration with the given ID exists.
-def validate_config(config_id: str):
-    # The API key under which configs are stored
-    api_key = os.environ.get("COREBRAIN_API_KEY", "")
-    manager = ConfigManager()
-    cfg = manager.get_config(api_key, config_id)
-
-    if cfg:
-        print(f"✅ Configuration '{config_id}' is present and valid.")
-        return 0
-    else:
-        print(f"❌ Configuration '{config_id}' not found.")
-        return 1
     
 # Función para imprimir mensajes coloreados
 def _print_colored(message: str, color: str) -> None:

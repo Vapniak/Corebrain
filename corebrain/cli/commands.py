@@ -307,16 +307,42 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("❌ Some system checks failed. Please review the issues above.", "red")
                 return 1
 
+        if args.configure or args.list_configs or args.show_schema:
+            """
+            Configure, list or show schema of the configured database.
 
+            Reuse the same autehntication code for configure, list and show schema.
+            """
+            # Get URLs
+            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            
+            # Prioritize api_key if explicitly provided
+            token_arg = args.api_key if args.api_key else args.token
+            
+            # Get API credentials
+            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
+            
+            if not api_key:
+                print_colored("Error: An API Key is required. You can generate one at dashboard.corebrain.com", "red")
+                print_colored("Or use the 'corebrain --login' command to login via SSO.", "blue")
+                return 1
+            
+            from corebrain.db.schema_file import show_db_schema, extract_schema_to_file
+            
+            # Execute the selected operation
+            if args.configure:
+                configure_sdk(api_token, api_key, api_url, sso_url, user_data)
+            elif args.list_configs:
+                ConfigManager.list_configs(api_key, api_url)
+            elif args.remove_config:
+                ConfigManager.remove_config(api_key, api_url)
+            elif args.show_schema:
+                show_db_schema(api_key, args.config_id, api_url)
+        
         if args.export_config:
             export_config(args.export_config)
             # --> config/manager.py --> export_config
-
-        if args.validate_config:
-            if not args.config_id:
-                print_colored("Error: --config-id is required for validation", "red")
-                return 1
-            return validate_config(args.config_id)
 
 
 
@@ -473,36 +499,8 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored(f"❌ Error when downloading data about user {str(e)}", "red")
                 return 1
         
-        # Operations that require credentials: configure, list, remove or show schema
-        if args.configure or args.list_configs:
-            # Get URLs
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            
-            # Prioritize api_key if explicitly provided
-            token_arg = args.api_key if args.api_key else args.token
-            
-            # Get API credentials
-            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
-            
-            if not api_key:
-                print_colored("Error: An API Key is required. You can generate one at dashboard.corebrain.com", "red")
-                print_colored("Or use the 'corebrain --login' command to login via SSO.", "blue")
-                return 1
-            
-            from corebrain.db.schema_file import show_db_schema, extract_schema_to_file
-            
-            # Execute the selected operation
-            if args.configure:
-                configure_sdk(api_token, api_key, api_url, sso_url, user_data)
-            elif args.list_configs:
-                ConfigManager.list_configs(api_key, api_url)
-            elif args.remove_config:
-                ConfigManager.remove_config(api_key, api_url)
-            elif args.show_schema:
-                show_db_schema(api_key, args.config_id, api_url)
-            elif args.extract_schema:
-                extract_schema_to_file(api_key, args.config_id, args.output_file, api_url)
+        
+        
         
         if args.test_connection:
             # Test connection to the Corebrain API
