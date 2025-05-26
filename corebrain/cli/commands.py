@@ -39,31 +39,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         if argv is None:
             argv = sys.argv[1:]
         
-        # Argument parser configuration
-        parser = argparse.ArgumentParser(description="Corebrain SDK CLI")
-        parser.add_argument("--version", action="store_true", help="Show SDK version")
-        parser.add_argument("--authentication", action="store_true", help="Authenticate with SSO")
-        parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
-        parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
-        parser.add_argument("--list-configs", action="store_true", help="List available configurations")
-
-        parser.add_argument("--token", help="Corebrain API token (any type)")
-        parser.add_argument("--api-key", help="Specific API Key for Corebrain")
-        parser.add_argument("--api-url", help="Corebrain API URL")
-        parser.add_argument("--sso-url", help="Globodain SSO service URL")
-        parser.add_argument("--login", action="store_true", help="Login via SSO")
-        parser.add_argument("--test-auth", action="store_true", help="Test SSO authentication system")
-        parser.add_argument("--woami",action="store_true",help="Display information about the current user")
-        parser.add_argument("--check-status",action="store_true",help="Checks status of task")
-        parser.add_argument("--task-id",help="ID of the task to check status for")
-        parser.add_argument("--validate-config",action="store_true",help="Validates the selected configuration without executing any operations")
-        parser.add_argument("--test-connection",action="store_true",help="Tests the connection to the Corebrain API using the provide credentials")
-        parser.add_argument("--export-config",action="store_true",help="Exports the current configuration to a file")
-        parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
-
-        
-        args = parser.parse_args(argv)
-        
+        # Functions
         def authentication():
             sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             sso_token, sso_user = authenticate_with_sso(sso_url)
@@ -356,49 +332,91 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("❌ Some system checks failed. Please review the issues above.", "red")
                 return 1
 
-        if args.configure or args.list_configs or args.show_schema:
-            """
-            Configure, list or show schema of the configured database.
-
-            Reuse the same autehntication code for configure, list and show schema.
-            """
-            # Get URLs
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            
-            # Prioritize api_key if explicitly provided
-            token_arg = args.api_key if args.api_key else args.token
-            
-            # Get API credentials
-            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
-            
-            if not api_key:
-                print_colored("Error: An API Key is required. You can generate one at dashboard.corebrain.com", "red")
-                print_colored("Or use the 'corebrain --login' command to login via SSO.", "blue")
-                return 1
-            
-            from corebrain.db.schema_file import show_db_schema, extract_schema_to_file
-            
-            # Execute the selected operation
-            if args.configure:
-                configure_sdk(api_token, api_key, api_url, sso_url, user_data)
-            elif args.list_configs:
-                ConfigManager.list_configs(api_key, api_url)
-            elif args.remove_config:
-                ConfigManager.remove_config(api_key, api_url)
-            elif args.show_schema:
-                show_db_schema(api_key, args.config_id, api_url)
-        
-        if args.export_config:
-            export_config(args.export_config)
-            # --> config/manager.py --> export_config
-
-
-
-        # Create an user and API Key by default
         if args.authentication:
+            """
+            Perform SSO authentication and display the obtained tokens and user data.
+            
+            This command initiates the SSO (Single Sign-On) authentication flow through the browser.
+            It opens a browser window for the user to authenticate with their Globodain SSO credentials
+            and returns the authentication token and user information.
+            
+            This is primarily used for testing authentication or when you need to see the raw
+            authentication data. For normal usage, prefer --login which also obtains API keys.
+            
+            Usage: corebrain --authentication [--sso-url <url>]
+            
+            Returns:
+            - SSO authentication token
+            - User profile data (name, email, etc.)
+            
+            Note: This command only authenticates but doesn't save credentials for future use.
+            """
             authentication()
             
+        if args.test_auth:
+            """
+            Test the SSO (Single Sign-On) authentication system.
+            
+            This command performs a comprehensive test of the SSO authentication flow
+            without saving any credentials or performing any actual operations. It's useful
+            for diagnosing authentication issues and verifying that the SSO system is working.
+            
+            The test process:
+            1. Configures the SSO authentication client
+            2. Generates a login URL
+            3. Opens the browser for user authentication
+            4. Waits for user to complete the authentication process
+            5. Reports success or failure
+            
+            Usage: corebrain --test-auth [--sso-url <url>]
+            
+            What it tests:
+            - SSO server connectivity
+            - Client configuration validity
+            - Authentication flow completion
+            - Browser integration
+            
+            Note: This is a diagnostic tool and doesn't save any authentication data.
+            For actual login, use --login instead.
+            """
+            sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            
+            print_colored("Testing SSO authentication...", "blue")
+            
+            # Authentication configuration
+            auth_config = {
+                'GLOBODAIN_SSO_URL': sso_url,
+                'GLOBODAIN_CLIENT_ID': SSO_CLIENT_ID,
+                'GLOBODAIN_CLIENT_SECRET': SSO_CLIENT_SECRET,
+                'GLOBODAIN_REDIRECT_URI': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback",
+                'GLOBODAIN_SUCCESS_REDIRECT': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback"
+            }
+            
+            try:
+                # Instantiate authentication client
+                sso_auth = GlobodainSSOAuth(config=auth_config)
+                
+                # Get login URL
+                login_url = sso_auth.get_login_url()
+                
+                print_colored(f"Login URL: {login_url}", "blue")
+                print_colored("Opening browser for login...", "blue")
+                
+                # Open browser
+                webbrowser.open(login_url)
+                
+                print_colored("Please complete the login process in the browser.", "blue")
+                input("\nPress Enter when you've completed the process or to cancel...")
+                
+                print_colored("✅ SSO authentication test completed!", "green")
+                return 0
+            except Exception as e:
+                print_colored(f"❌ Error during test: {str(e)}", "red")
+                return 1
+        
+
+        ## ** SDK ** ##
+        
         if args.create_user:
             """
             Create a new user account and generate an associated API Key.
