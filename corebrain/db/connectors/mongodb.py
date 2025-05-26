@@ -17,7 +17,7 @@ except ImportError:
 
 from corebrain.db.connector import DatabaseConnector
 
-class MongoDBConnector(DatabaseConnector):
+class NoSQLConnector(DatabaseConnector):
     """Optimized connector for MongoDB."""
     
     def __init__(self, config: Dict[str, Any]):

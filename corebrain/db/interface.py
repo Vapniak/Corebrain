@@ -33,4 +33,4 @@ class DatabaseConnector(ABC):
 # - SQLiteConnector
 # - MySQLConnector
 # - PostgresConnector
-# - MongoDBConnector
+# - NoSQLConnector
