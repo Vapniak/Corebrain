@@ -16,7 +16,6 @@ from corebrain.cli.auth.sso import authenticate_with_sso, authenticate_with_sso_
 from corebrain.cli.config import configure_sdk, get_api_credential
 from corebrain.cli.utils import print_colored
 from corebrain.config.manager import ConfigManager
-from corebrain.config.manager import export_config
 from corebrain.lib.sso.auth import GlobodainSSOAuth
 
 def main_cli(argv: Optional[List[str]] = None) -> int:
@@ -39,36 +38,9 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         if argv is None:
             argv = sys.argv[1:]
         
-        # Argument parser configuration
-        parser = argparse.ArgumentParser(description="Corebrain SDK CLI")
-        parser.add_argument("--version", action="store_true", help="Show SDK version")
-        parser.add_argument("--authentication", action="store_true", help="Authenticate with SSO")
-        parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
-        parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
-        parser.add_argument("--list-configs", action="store_true", help="List available configurations")
-
-        parser.add_argument("--token", help="Corebrain API token (any type)")
-        parser.add_argument("--api-key", help="Specific API Key for Corebrain")
-        parser.add_argument("--api-url", help="Corebrain API URL")
-        parser.add_argument("--sso-url", help="Globodain SSO service URL")
-        parser.add_argument("--login", action="store_true", help="Login via SSO")
-        parser.add_argument("--test-auth", action="store_true", help="Test SSO authentication system")
-        parser.add_argument("--woami",action="store_true",help="Display information about the current user")
-        parser.add_argument("--check-status",action="store_true",help="Checks status of task")
-        parser.add_argument("--task-id",help="ID of the task to check status for")
-        parser.add_argument("--validate-config",action="store_true",help="Validates the selected configuration without executing any operations")
-        parser.add_argument("--test-connection",action="store_true",help="Tests the connection to the Corebrain API using the provide credentials")
-        parser.add_argument("--export-config",action="store_true",help="Exports the current configuration to a file")
-        parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
-        parser.add_argument("--config-id", help="Configuration ID for operations that require it")
-        parser.add_argument("--output-file", help="Output file path for export operations")
-        parser.add_argument("--show-schema", action="store_true", help="Display database schema for a configuration")
-
-        
-        args = parser.parse_args(argv)
-        
+        # Functions
         def authentication():
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             sso_token, sso_user = authenticate_with_sso(sso_url)
             if sso_token:
                 try:
@@ -85,9 +57,50 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             else:
                 print_colored("❌ Could not authenticate with SSO.", "red")
                 return None, None
+
+        def authentication_with_api_key_return():
+            sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            api_key_selected, user_data, api_token = authenticate_with_sso_and_api_key_request(sso_url)
+
+            if sso_token:
+                try:
+                    print_colored("✅ User authenticated and SDK is now connected to API.", "green")
+                    print_colored("✅ Returning User data.", "green")
+                    print_colored(f"{user_data}", "blue")
+                    return api_key_selected, user_data, api_token
+                
+                except Exception as e:
+                    print_colored("❌ Could not return SSO Token or SSO User data.", "red")
+                    return api_key_selected, user_data, api_token
+                
+            else:
+                print_colored("❌ Could not authenticate with SSO.", "red")
+                return None, None, None
+
+        # Argument parser configuration
+        parser = argparse.ArgumentParser(description="Corebrain SDK CLI")
+
+        # Arguments for development
+        parser.add_argument("--version", action="store_true", help="Show SDK version")
+        parser.add_argument("--check-status",action="store_true",help="Checks status of task")
+        parser.add_argument("--authentication", action="store_true", help="Authenticate with SSO")
+        parser.add_argument("--test-auth", action="store_true", help="Test SSO authentication system") # Is this command really useful? 
+
+        # Arguments to use the SDK
+        parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
+        parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
+        parser.add_argument("--list-configs", action="store_true", help="List available configurations")
+        parser.add_argument("--show-schema", action="store_true", help="Display database schema for a configuration")
+        parser.add_argument("--woami",action="store_true",help="Display information about the current user")
+        parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
         
+        args = parser.parse_args(argv)
 
+        # Common variables
+        api_url = os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
+        sso_url = os.environ.get("COREBRAIN_SSO_URL", DEFAULT_SSO_URL)
 
+        ## ** For development ** ##
         if args.version:
             """
             Display the current version of the Corebrain SDK.
@@ -254,7 +267,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     return False
             
             # Determine if in development or production mode
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+            api_url = os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
             is_development = "localhost" in api_url or "127.0.0.1" in api_url or api_url == DEFAULT_API_URL
             
             print_colored("🔍 Checking system status...", "blue")
@@ -306,7 +319,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     all_checks_passed = False
             
             # Check SSO service for both modes
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             if not check_url(sso_url, "SSO Server"):
                 all_checks_passed = False
             
@@ -318,25 +331,190 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("❌ Some system checks failed. Please review the issues above.", "red")
                 return 1
 
+        if args.authentication:
+            """
+            Perform SSO authentication and display the obtained tokens and user data.
+            
+            This command initiates the SSO (Single Sign-On) authentication flow through the browser.
+            It opens a browser window for the user to authenticate with their Globodain SSO credentials
+            and returns the authentication token and user information.
+            
+            This is primarily used for testing authentication or when you need to see the raw
+            authentication data. For normal usage, prefer --login which also obtains API keys.
+            
+            Usage: corebrain --authentication [--sso-url <url>]
+            
+            Returns:
+            - SSO authentication token
+            - User profile data (name, email, etc.)
+            
+            Note: This command only authenticates but doesn't save credentials for future use.
+            """
+            authentication()
+            
+        if args.test_auth:
+            """
+            Test the SSO (Single Sign-On) authentication system.
+            
+            This command performs a comprehensive test of the SSO authentication flow
+            without saving any credentials or performing any actual operations. It's useful
+            for diagnosing authentication issues and verifying that the SSO system is working.
+            
+            The test process:
+            1. Configures the SSO authentication client
+            2. Generates a login URL
+            3. Opens the browser for user authentication
+            4. Waits for user to complete the authentication process
+            5. Reports success or failure
+            
+            Usage: corebrain --test-auth [--sso-url <url>]
+            
+            What it tests:
+            - SSO server connectivity
+            - Client configuration validity
+            - Authentication flow completion
+            - Browser integration
+            
+            Note: This is a diagnostic tool and doesn't save any authentication data.
+            For actual login, use --login instead.
+            """
+            sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            
+            print_colored("Testing SSO authentication...", "blue")
+            
+            # Authentication configuration
+            auth_config = {
+                'GLOBODAIN_SSO_URL': sso_url,
+                'GLOBODAIN_CLIENT_ID': SSO_CLIENT_ID,
+                'GLOBODAIN_CLIENT_SECRET': SSO_CLIENT_SECRET,
+                'GLOBODAIN_REDIRECT_URI': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback",
+                'GLOBODAIN_SUCCESS_REDIRECT': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback"
+            }
+            
+            try:
+                # Instantiate authentication client
+                sso_auth = GlobodainSSOAuth(config=auth_config)
+                
+                # Get login URL
+                login_url = sso_auth.get_login_url()
+                
+                print_colored(f"Login URL: {login_url}", "blue")
+                print_colored("Opening browser for login...", "blue")
+                
+                # Open browser
+                webbrowser.open(login_url)
+                
+                print_colored("Please complete the login process in the browser.", "blue")
+                input("\nPress Enter when you've completed the process or to cancel...")
+                
+                print_colored("✅ SSO authentication test completed!", "green")
+                return 0
+            except Exception as e:
+                print_colored(f"❌ Error during test: {str(e)}", "red")
+                return 1
+        
+
+        ## ** SDK ** ##
+        
+        if args.create_user:
+            """
+            Create a new user account and generate an associated API Key.
+            
+            This command performs a complete user registration process:
+            1. Authenticates the user through SSO (Single Sign-On)
+            2. Creates a new user account in the Corebrain system using SSO data
+            3. Automatically generates an API Key for the new user
+            
+            The user can choose to use their SSO password or create a new password
+            specifically for their Corebrain account. If using SSO password fails,
+            a random secure password will be generated.
+            
+            Usage: corebrain --create-user [--api-url <url>] [--sso-url <url>]
+            
+            Interactive prompts:
+            - SSO authentication (browser-based)
+            - Password choice (use SSO password or create new)
+            - Password confirmation (if creating new)
+            
+            Requirements:
+            - Valid Globodain SSO account
+            - Internet connection for API communication
+            
+            On success: Creates user account and displays confirmation
+            On failure: Shows specific error message
+            """
+            sso_token, sso_user = authentication() # Authentica use with SSO
+            
+            if sso_token and sso_user:
+                print_colored("✅ Enter to create an user and API Key.", "green")
+                
+                # Get API URL from environment or use default
+                api_url = os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
+                
+                """
+                Create user data with SSO information.
+                If the user wants to use a different password than their SSO account,
+                they can specify it here.
+                """
+                # Ask if user wants to use SSO password or create a new one
+                use_sso_password = input("Do you want to use your SSO password? (y/n): ").lower().strip() == 'y'
+                
+                if use_sso_password:
+                    random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+                    password = sso_user.get("password", random_password)
+                else:
+                    while True:
+                        password = input("Enter new password: ").strip()
+                        if len(password) >= 8:
+                            break
+                        print_colored("Password must be at least 8 characters long", "yellow")
+                
+                user_data = {
+                    "email": sso_user["email"],
+                    "name": f"{sso_user['first_name']} {sso_user['last_name']}",
+                    "password": password
+                }
+                
+                try:
+                    # Make the API request
+                    response = requests.post(
+                        f"{api_url}/api/auth/users",
+                        json=user_data,
+                        headers={
+                            "Authorization": f"Bearer {sso_token}",
+                            "Content-Type": "application/json"
+                        }
+                    )
+                    
+                    # Check if the request was successful
+                    print("response API: ", response)
+                    if response.status_code == 200:
+                        print_colored("✅ User and API Key created successfully!", "green")
+                        return 0
+                    else:
+                        print_colored(f"❌ Error creating user: {response.text}", "red")
+                        return 1
+                        
+                except requests.exceptions.RequestException as e:
+                    print_colored(f"❌ Error connecting to API: {str(e)}", "red")
+                    return 1
+                
+            else:
+                print_colored("❌ Could not create the user or the API KEY.", "red")
+                return 1
+        
         if args.configure or args.list_configs or args.show_schema:
             """
             Configure, list or show schema of the configured database.
 
-            Reuse the same autehntication code for configure, list and show schema.
+            Reuse the same authentication code for configure, list and show schema.
             """
-            # Get URLs
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             
-            # Prioritize api_key if explicitly provided
-            token_arg = args.api_key if args.api_key else args.token
+            api_key_selected, user_data, api_token = authentication_with_api_key_return() # Authentica use with SSO
             
-            # Get API credentials
-            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
-            
-            if not api_key:
-                print_colored("Error: An API Key is required. You can generate one at dashboard.corebrain.com", "red")
-                print_colored("Or use the 'corebrain --login' command to login via SSO.", "blue")
+            if not api_key_selected:
+                print_colored("Error: An API Key is required. You can generate one at dashboard.etedata.com", "red")
+                print_colored("Or use the 'corebrain --create-api-key' command to create a new one using CLI.", "blue")
                 return 1
             
             from corebrain.db.schema_file import show_db_schema
@@ -410,7 +588,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 - Appropriate database permissions for schema reading
                 - Internet connectivity for API synchronization
                 """
-                configure_sdk(api_token, api_key, api_url, sso_url, user_data)
+                configure_sdk(api_token, api_key_selected, api_url, sso_url, user_data)
 
             elif args.list_configs:
                 """
@@ -542,8 +720,12 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 """
                 show_db_schema(api_key, args.config_id, api_url)
 
+
+
+        # ** move to the config manager --> inside of the command --list-configs **
+
         # Handle validate-config and export-config commands
-        if args.validate_config:
+        #if args.validate_config:
             """
             Validate a saved configuration without executing any operations.
             
@@ -579,52 +761,52 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             
             Note: This command requires a valid API key to access saved configurations.
             """
-            if not args.config_id:
-                print_colored("Error: --config-id is required for validation", "red")
-                return 1
+        #    if not args.config_id:
+        #        print_colored("Error: --config-id is required for validation", "red")
+        #        return 1
             
             # Get credentials
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            token_arg = args.api_key if args.api_key else args.token
-            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
+        #    api_url = os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+        #    sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+        #    token_arg = args.api_key if args.api_key else args.token
+        #    api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
             
-            if not api_key:
-                print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
-                return 1
+        #    if not api_key:
+        #        print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
+        #        return 1
             
             # Validate the configuration
-            try:
-                config_manager = ConfigManager()
-                config = config_manager.get_config(api_key, args.config_id)
+        #    try:
+        #        config_manager = ConfigManager()
+        #        config = config_manager.get_config(api_key, args.config_id)
                 
-                if not config:
-                    print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
-                    return 1
+        #        if not config:
+        #            print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
+        #            return 1
                 
-                print_colored(f"✅ Validating configuration: {args.config_id}", "blue")
+        #        print_colored(f"✅ Validating configuration: {args.config_id}", "blue")
                 
                 # Create a temporary Corebrain instance to validate
-                from corebrain.core.client import Corebrain
-                try:
-                    temp_client = Corebrain(
-                        api_key=api_key,
-                        db_config=config,
-                        skip_verification=True
-                    )
-                    print_colored("✅ Configuration validation passed!", "green")
-                    print_colored(f"Database type: {config.get('type', 'Unknown')}", "blue")
-                    print_colored(f"Engine: {config.get('engine', 'Unknown')}", "blue")
-                    return 0
-                except Exception as validation_error:
-                    print_colored(f"❌ Configuration validation failed: {str(validation_error)}", "red")
-                    return 1
+        #        from corebrain.core.client import Corebrain
+        #        try:
+        #            temp_client = Corebrain(
+        #                api_key=api_key,
+        #                db_config=config,
+        #                skip_verification=True
+        #            )
+        #            print_colored("✅ Configuration validation passed!", "green")
+        #            print_colored(f"Database type: {config.get('type', 'Unknown')}", "blue")
+        #            print_colored(f"Engine: {config.get('engine', 'Unknown')}", "blue")
+        #            return 0
+        #        except Exception as validation_error:
+        #            print_colored(f"❌ Configuration validation failed: {str(validation_error)}", "red")
+        #            return 1
                     
-            except Exception as e:
-                print_colored(f"❌ Error during validation: {str(e)}", "red")
-                return 1
+        #    except Exception as e:
+        #        print_colored(f"❌ Error during validation: {str(e)}", "red")
+        #        return 1
 
-        if args.export_config:
+        #if args.export_config:
             """
             Export a saved configuration to a JSON file.
             
@@ -668,271 +850,44 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             - Create configuration templates
             - Document database connection settings
             """
-            if not args.config_id:
-                print_colored("Error: --config-id is required for export", "red")
-                return 1
+        #    if not args.config_id:
+        #        print_colored("Error: --config-id is required for export", "red")
+        #        return 1
                 
             # Get credentials
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            token_arg = args.api_key if args.api_key else args.token
-            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
+        #    api_url = os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+        #    sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+        #    token_arg = args.api_key if args.api_key else args.token
+        #    api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
             
-            if not api_key:
-                print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
-                return 1
+        #    if not api_key:
+        #        print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
+        #        return 1
             
             # Export the configuration
-            try:
-                config_manager = ConfigManager()
-                config = config_manager.get_config(api_key, args.config_id)
+        #    try:
+        #        config_manager = ConfigManager()
+        #        config = config_manager.get_config(api_key, args.config_id)
                 
-                if not config:
-                    print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
-                    return 1
+        #        if not config:
+        #            print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
+        #            return 1
                 
                 # Generate output filename if not provided
-                output_file = getattr(args, 'output_file', None) or f"config_{args.config_id}.json"
+        #        output_file = getattr(args, 'output_file', None) or f"config_{args.config_id}.json"
                 
                 # Export to file
-                import json
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, indent=2, default=str)
+        #        import json
+        #        with open(output_file, 'w', encoding='utf-8') as f:
+        #            json.dump(config, f, indent=2, default=str)
                 
-                print_colored(f"✅ Configuration exported to: {output_file}", "green")
-                return 0
+        #        print_colored(f"✅ Configuration exported to: {output_file}", "green")
+        #        return 0
                 
-            except Exception as e:
-                print_colored(f"❌ Error exporting configuration: {str(e)}", "red")
-                return 1
+        #    except Exception as e:
+        #        print_colored(f"❌ Error exporting configuration: {str(e)}", "red")
+        #        return 1
 
-        # Create an user and API Key by default
-        if args.authentication:
-            """
-            Perform SSO authentication and display the obtained tokens and user data.
-            
-            This command initiates the SSO (Single Sign-On) authentication flow through the browser.
-            It opens a browser window for the user to authenticate with their Globodain SSO credentials
-            and returns the authentication token and user information.
-            
-            This is primarily used for testing authentication or when you need to see the raw
-            authentication data. For normal usage, prefer --login which also obtains API keys.
-            
-            Usage: corebrain --authentication [--sso-url <url>]
-            
-            Returns:
-            - SSO authentication token
-            - User profile data (name, email, etc.)
-            
-            Note: This command only authenticates but doesn't save credentials for future use.
-            """
-            authentication()
-            
-        if args.create_user:
-            """
-            Create a new user account and generate an associated API Key.
-            
-            This command performs a complete user registration process:
-            1. Authenticates the user through SSO (Single Sign-On)
-            2. Creates a new user account in the Corebrain system using SSO data
-            3. Automatically generates an API Key for the new user
-            
-            The user can choose to use their SSO password or create a new password
-            specifically for their Corebrain account. If using SSO password fails,
-            a random secure password will be generated.
-            
-            Usage: corebrain --create-user [--api-url <url>] [--sso-url <url>]
-            
-            Interactive prompts:
-            - SSO authentication (browser-based)
-            - Password choice (use SSO password or create new)
-            - Password confirmation (if creating new)
-            
-            Requirements:
-            - Valid Globodain SSO account
-            - Internet connection for API communication
-            
-            On success: Creates user account and displays confirmation
-            On failure: Shows specific error message
-            """
-            sso_token, sso_user = authentication() # Authentica use with SSO
-            
-            if sso_token and sso_user:
-                print_colored("✅ Enter to create an user and API Key.", "green")
-                
-                # Get API URL from environment or use default
-                api_url = os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
-                
-                """
-                Create user data with SSO information.
-                If the user wants to use a different password than their SSO account,
-                they can specify it here.
-                """
-                # Ask if user wants to use SSO password or create a new one
-                use_sso_password = input("Do you want to use your SSO password? (y/n): ").lower().strip() == 'y'
-                
-                if use_sso_password:
-                    random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-                    password = sso_user.get("password", random_password)
-                else:
-                    while True:
-                        password = input("Enter new password: ").strip()
-                        if len(password) >= 8:
-                            break
-                        print_colored("Password must be at least 8 characters long", "yellow")
-                
-                user_data = {
-                    "email": sso_user["email"],
-                    "name": f"{sso_user['first_name']} {sso_user['last_name']}",
-                    "password": password
-                }
-                
-                try:
-                    # Make the API request
-                    response = requests.post(
-                        f"{api_url}/api/auth/users",
-                        json=user_data,
-                        headers={
-                            "Authorization": f"Bearer {sso_token}",
-                            "Content-Type": "application/json"
-                        }
-                    )
-                    
-                    # Check if the request was successful
-                    print("response API: ", response)
-                    if response.status_code == 200:
-                        print_colored("✅ User and API Key created successfully!", "green")
-                        return 0
-                    else:
-                        print_colored(f"❌ Error creating user: {response.text}", "red")
-                        return 1
-                        
-                except requests.exceptions.RequestException as e:
-                    print_colored(f"❌ Error connecting to API: {str(e)}", "red")
-                    return 1
-                
-            else:
-                print_colored("❌ Could not create the user or the API KEY.", "red")
-                return 1
-        
-        # Test SSO authentication
-        if args.test_auth:
-            """
-            Test the SSO (Single Sign-On) authentication system.
-            
-            This command performs a comprehensive test of the SSO authentication flow
-            without saving any credentials or performing any actual operations. It's useful
-            for diagnosing authentication issues and verifying that the SSO system is working.
-            
-            The test process:
-            1. Configures the SSO authentication client
-            2. Generates a login URL
-            3. Opens the browser for user authentication
-            4. Waits for user to complete the authentication process
-            5. Reports success or failure
-            
-            Usage: corebrain --test-auth [--sso-url <url>]
-            
-            What it tests:
-            - SSO server connectivity
-            - Client configuration validity
-            - Authentication flow completion
-            - Browser integration
-            
-            Note: This is a diagnostic tool and doesn't save any authentication data.
-            For actual login, use --login instead.
-            """
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            
-            print_colored("Testing SSO authentication...", "blue")
-            
-            # Authentication configuration
-            auth_config = {
-                'GLOBODAIN_SSO_URL': sso_url,
-                'GLOBODAIN_CLIENT_ID': SSO_CLIENT_ID,
-                'GLOBODAIN_CLIENT_SECRET': SSO_CLIENT_SECRET,
-                'GLOBODAIN_REDIRECT_URI': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback",
-                'GLOBODAIN_SUCCESS_REDIRECT': f"http://localhost:{DEFAULT_PORT}/auth/sso/callback"
-            }
-            
-            try:
-                # Instantiate authentication client
-                sso_auth = GlobodainSSOAuth(config=auth_config)
-                
-                # Get login URL
-                login_url = sso_auth.get_login_url()
-                
-                print_colored(f"Login URL: {login_url}", "blue")
-                print_colored("Opening browser for login...", "blue")
-                
-                # Open browser
-                webbrowser.open(login_url)
-                
-                print_colored("Please complete the login process in the browser.", "blue")
-                input("\nPress Enter when you've completed the process or to cancel...")
-                
-                print_colored("✅ SSO authentication test completed!", "green")
-                return 0
-            except Exception as e:
-                print_colored(f"❌ Error during test: {str(e)}", "red")
-                return 1
-        
-        # Login via SSO
-        if args.login:
-            """
-            Login via SSO and obtain API credentials for SDK usage.
-            
-            This is the primary authentication command for normal SDK usage. It performs
-            a complete authentication and credential acquisition process:
-            
-            1. Opens browser for SSO authentication
-            2. Exchanges SSO token for Corebrain API token
-            3. Fetches available API keys for the user
-            4. Allows user to select which API key to use
-            5. Saves credentials in environment variables for immediate use
-            
-            Usage: corebrain --login [--sso-url <url>] [--configure]
-            
-            What it provides:
-            - API Token: For general authentication with Corebrain services
-            - API Key: For specific SDK operations and database access
-            - User Data: Profile information from SSO
-            
-            Environment variables set:
-            - COREBRAIN_API_TOKEN: General API authentication token
-            - COREBRAIN_API_KEY: Specific API key for SDK operations
-            
-            Optional: If --configure is also specified, it will automatically launch
-            the configuration wizard after successful login.
-            
-            This is the recommended way to authenticate for first-time users.
-            """
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
-            api_key, user_data, api_token = authenticate_with_sso_and_api_key_request(sso_url)
-            
-            if api_token:
-                # Save the general token for future use
-                os.environ["COREBRAIN_API_TOKEN"] = api_token
-            
-            if api_key:
-                # Save the specific API key for future use
-                os.environ["COREBRAIN_API_KEY"] = api_key
-                print_colored("✅ API Key successfully saved. You can use the SDK now.", "green")
-                
-                # If configuration was also requested, continue with the process
-                if args.configure:
-                    api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
-                    configure_sdk(api_token, api_key, api_url, sso_url, user_data)
-                
-                return 0
-            else:
-                print_colored("❌ Could not obtain an API Key via SSO.", "red")
-                if api_token:
-                    print_colored("A general API token was obtained, but not a specific API Key.", "yellow")
-                    print_colored("You can create an API Key in the Corebrain dashboard.", "yellow")
-                return 1
-            
-        
 
         if args.woami:
             """
@@ -969,7 +924,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             """
             try:
                 #downloading user data
-                sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+                sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
                 token_arg = args.api_key if args.api_key else args.token
 
                 #using saved data about user 
@@ -987,81 +942,6 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             except Exception as e:
                 print_colored(f"❌ Error when downloading data about user {str(e)}", "red")
                 return 1
-        
-        
-        
-        
-        if args.test_connection:
-            """
-            Test the connection to the Corebrain API using the provided credentials.
-            
-            This command verifies that the SDK can successfully connect to and authenticate
-            with the Corebrain API server. It's useful for diagnosing connectivity issues,
-            credential problems, or API server availability.
-            
-            The test process:
-            1. Retrieves API credentials from various sources
-            2. Attempts to connect to the specified API endpoint
-            3. Performs authentication verification
-            4. Reports connection status and any errors
-            
-            Usage: corebrain --test-connection [--token <token>] [--api-url <url>] [--sso-url <url>]
-            
-            Credential sources (in order of priority):
-            1. Token provided via --token argument
-            2. COREBRAIN_API_KEY environment variable
-            3. COREBRAIN_API_TOKEN environment variable
-            4. SSO authentication (if no credentials found)
-            
-            What it tests:
-            - Network connectivity to API server
-            - API server availability and responsiveness
-            - Credential validity and authentication
-            - SSL/TLS connection (for HTTPS endpoints)
-            
-            Success indicators:
-            - ✅ Successfully connected to Corebrain API
-            
-            Failure indicators:
-            - Connection timeouts or network errors
-            - Invalid or expired credentials
-            - API server errors or maintenance
-            
-            Use cases:
-            - Troubleshoot connection issues
-            - Verify API credentials before starting work
-            - Check API server status
-            - Validate network connectivity in restricted environments
-            """
-            # Test connection to the Corebrain API
-            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
-            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL", DEFAULT_SSO_URL)
-            
-            try:
-                # Retrieve API credentials
-                api_key, user_data, api_token = get_api_credential(args.token, sso_url)
-            except Exception as e:
-                print_colored(f"Error while retrieving API credentials: {e}", "red")
-                return 1
-
-            if not api_key:
-                print_colored(
-                    "Error: An API key is required. You can generate one at dashboard.corebrain.com.",
-                    "red"
-                )
-                return 1
-
-            try:
-                # Test the connection
-                from corebrain.db.schema_file import test_connection
-                test_connection(api_key, api_url)
-                print_colored("Successfully connected to Corebrain API.", "green")
-            except Exception as e:
-                print_colored(f"Failed to connect to Corebrain API: {e}", "red")
-                return 1
-
-
-
 
         if args.gui:
             """
@@ -1179,16 +1059,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             url = "http://localhost:5173/"
             print_colored(f"GUI: {url}", "cyan")
             webbrowser.open(url)
-        
-
-
-
-
-
-
-
-
-
+    
 
         else:
             # If no option was specified, show help
