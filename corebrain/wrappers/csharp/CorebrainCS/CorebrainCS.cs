@@ -16,7 +16,6 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   private readonly string _scriptPath = Path.GetFullPath(scriptPath);
   private readonly bool _verbose = verbose;
 
-
   /// Shows help message with all available commands
 
   public string Help()
@@ -82,8 +81,10 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
     var escapedUsername = username.Replace("\"", "\\\"");
     var escapedPassword = password.Replace("\"", "\\\"");
 
+
     return ExecuteCommand($"--authentication --username \"{escapedUsername}\" --password \"{escapedPassword}\"");
   }
+
 
   /// Authenticates with SSO using a token
 
@@ -105,7 +106,6 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   {
     return ExecuteCommand("--create-user");
   }
-
 
   /// Launches the configuration wizard for setting up database connections
 
@@ -139,7 +139,9 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
     return ExecuteCommand("--gui");
   }
 
+
   private string ExecuteCommand(string arguments)
+
   {
     if (_verbose)
     {
