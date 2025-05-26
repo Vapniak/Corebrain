@@ -84,7 +84,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--version", action="store_true", help="Show SDK version")
         parser.add_argument("--check-status",action="store_true",help="Checks status of task")
         parser.add_argument("--authentication", action="store_true", help="Authenticate with SSO")
-        parser.add_argument("--test-auth", action="store_true", help="Test SSO authentication system")
+        parser.add_argument("--test-auth", action="store_true", help="Test SSO authentication system") # Is this command really useful? 
 
         # Arguments to use the SDK
         parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
