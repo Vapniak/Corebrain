@@ -2,6 +2,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 /// <summary>
 /// Creates the main corebrain interface.
@@ -9,218 +10,46 @@ using System.Diagnostics;
 /// <param name="pythonPath">Path to the python which works with the corebrain cli, for example if you create the ./.venv you pass the path to the ./.venv python executable</param>
 /// <param name="scriptPath">Path to the corebrain cli script, if you installed it globally you just pass the `corebrain` path</param>
 /// <param name="verbose"></param>
-public class CorebrainCS(string pythonPath = "python", string scriptPath = "corebrain", bool verbose = false) {
+public class CorebrainCS(string pythonPath = "python", string scriptPath = "corebrain", bool verbose = false)
+{
   private readonly string _pythonPath = Path.GetFullPath(pythonPath);
   private readonly string _scriptPath = Path.GetFullPath(scriptPath);
   private readonly bool _verbose = verbose;
 
 
-  public string Help() {
+  /// Shows help message with all available commands
+
+  public string Help()
+  {
     return ExecuteCommand("--help");
   }
 
-  public string Version() {
+
+  /// Shows the current version of the Corebrain SDK
+
+  public string Version()
+  {
     return ExecuteCommand("--version");
   }
 
-  public string Configure() {
-    return ExecuteCommand("--configure");
-  }
+  /// Checks system status including:
+  /// - API Server status
+  /// - Redis status
+  /// - SSO Server status
+  /// - MongoDB status
+  /// - Required libraries installation
 
-  public string ListConfigs() {
-    return ExecuteCommand("--list-configs");
-  }
-
-  public string RemoveConfig() {
-    return ExecuteCommand("--remove-config");
-  }
-
-  public string ShowSchema() {
-    return ExecuteCommand("--show-schema");
-  }
-
-  public string ExtractSchema() {
-    return ExecuteCommand("--extract-schema");
-  }
-
-  public string ExtractSchemaToDefaultFile() {
-    return ExecuteCommand("--extract-schema --output-file test");
-  }
-
-  public string ConfigID() {
-    return ExecuteCommand("--extract-schema --config-id config");
-  }
-
-  public string SetToken(string token) {
-    return ExecuteCommand($"--token {token}");
-  }
-
-  public string ApiKey(string apikey) {
-    return ExecuteCommand($"--api-key {apikey}");
-  }
-
-  public string ApiUrl(string apiurl) {
-    if (string.IsNullOrWhiteSpace(apiurl)) {
-      throw new ArgumentException("API URL cannot be empty or whitespace", nameof(apiurl));
-    }
-
-    if (!Uri.TryCreate(apiurl, UriKind.Absolute, out var uriResult) ||
-        (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps)) {
-      throw new ArgumentException("Invalid API URL format. Must be a valid HTTP/HTTPS URL", nameof(apiurl));
-    }
-
-    var escapedUrl = apiurl.Replace("\"", "\\\"");
-    return ExecuteCommand($"--api-url \"{escapedUrl}\"");
-  } 
-  public string SsoUrl(string ssoUrl) {
-    if (string.IsNullOrWhiteSpace(ssoUrl)) {
-        throw new ArgumentException("SSO URL cannot be empty or whitespace", nameof(ssoUrl));
-    }
-
-    if (!Uri.TryCreate(ssoUrl, UriKind.Absolute, out var uriResult) ||
-        (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))  {
-        throw new ArgumentException("Invalid SSO URL format. Must be a valid HTTP/HTTPS URL", nameof(ssoUrl));
-    }
-
-    var escapedUrl = ssoUrl.Replace("\"", "\\\"");
-    return ExecuteCommand($"--sso-url \"{escapedUrl}\"");
-  }
-  public string Login(string username, string password){
-    if (string.IsNullOrWhiteSpace(username)){
-        throw new ArgumentException("Username cannot be empty or whitespace", nameof(username));
-    }
-
-    if (string.IsNullOrWhiteSpace(password)){
-        throw new ArgumentException("Password cannot be empty or whitespace", nameof(password));
-    }
-
-    var escapedUsername = username.Replace("\"", "\\\"");
-    var escapedPassword = password.Replace("\"", "\\\"");
-
-    return ExecuteCommand($"--login --username \"{escapedUsername}\" --password \"{escapedPassword}\"");
-  }
-
-  public string LoginWithToken(string token) {
-      if (string.IsNullOrWhiteSpace(token)) {
-          throw new ArgumentException("Token cannot be empty or whitespace", nameof(token));
-      }
-
-      var escapedToken = token.Replace("\"", "\\\"");
-      return ExecuteCommand($"--login --token \"{escapedToken}\"");
-  }
-
-  //When youre logged in use this function
-  public string TestAuth() {
-    return ExecuteCommand("--test-auth");
-  }
-
-  //Without beeing logged
-  public string TestAuth(string? apiUrl = null, string? token = null) {
-    var args = new List<string> { "--test-auth" };
-            
-    if (!string.IsNullOrEmpty(apiUrl)) {
-        if (!Uri.IsWellFormedUriString(apiUrl, UriKind.Absolute))
-            throw new ArgumentException("Invalid API URL format", nameof(apiUrl));
-                
-        args.Add($"--api-url \"{apiUrl}\"");
-        }
-            
-    if (!string.IsNullOrEmpty(token))
-        args.Add($"--token \"{token}\"");
-
-    return ExecuteCommand(string.Join(" ", args));
-  }
-
-public string WoAmI() {
-    return ExecuteCommand("--woami");
-}
-
-public string CheckStatus() {
-    return ExecuteCommand("--check-status");
-}
-
-public string CheckStatus(string? apiUrl = null, string? token = null) {
-    var args = new List<string> { "--check-status" };
-    
-    if (!string.IsNullOrEmpty(apiUrl)) {
-        if (!Uri.IsWellFormedUriString(apiUrl, UriKind.Absolute))
-            throw new ArgumentException("Invalid API URL format", nameof(apiUrl));
-        
-        args.Add($"--api-url \"{apiUrl}\"");
-    }
-    
-    if (!string.IsNullOrEmpty(token))
-        args.Add($"--token \"{token}\"");
-
-    return ExecuteCommand(string.Join(" ", args));
-}
-
-public string TaskStatus(string taskId) {
-    if (string.IsNullOrWhiteSpace(taskId)) {
-        throw new ArgumentException("Task ID cannot be empty", nameof(taskId));
-    }
-
-    return ExecuteCommand($"--task-id {taskId}");
-}
-
-public string TaskStatus(string taskId, string? apiUrl = null, string? token = null) {
-    if (string.IsNullOrWhiteSpace(taskId)) {
-        throw new ArgumentException("Task ID cannot be empty", nameof(taskId));
-    }
-
-    var args = new List<string> { $"--task-id {taskId}" };
-
-    if (!string.IsNullOrEmpty(apiUrl)) {
-        if (!Uri.IsWellFormedUriString(apiUrl, UriKind.Absolute))
-            throw new ArgumentException("Invalid API URL format", nameof(apiUrl));
-        
-        args.Add($"--api-url \"{apiUrl}\"");
-    }
-
-    if (!string.IsNullOrEmpty(token))
-        args.Add($"--token \"{token}\"");
-
-    return ExecuteCommand(string.Join(" ", args));
-}
-
-public string ValidateConfig() {
-    return ExecuteCommand("--validate-config");
-}
-
-public string ValidateConfig(string configFilePath) {
-    if (string.IsNullOrWhiteSpace(configFilePath)) {
-        throw new ArgumentException("Config file path cannot be empty", nameof(configFilePath));
-    }
-
-    if (!File.Exists(configFilePath)) {
-        throw new FileNotFoundException("Config file not found", configFilePath);
-    }
-
-    return ExecuteCommand($"--validate-config \"{configFilePath}\"");
-}
-
-  public string ValidateConfig(string? apiUrl = null, string? token = null) {
-    var args = new List<string> { "--validate-config" };
-
-    if (!string.IsNullOrEmpty(apiUrl)) {
-      if (!Uri.IsWellFormedUriString(apiUrl, UriKind.Absolute))
-        throw new ArgumentException("Invalid API URL format", nameof(apiUrl));
-
-      args.Add($"--api-url \"{apiUrl}\"");
-    }
-
-    if (!string.IsNullOrEmpty(token))
-      args.Add($"--token \"{token}\"");
-
-    return ExecuteCommand(string.Join(" ", args));
-  }
-public string TestConnection() {
-    return ExecuteCommand("--test-connection");
-}
-
-  public string TestConnection(string? apiUrl = null, string? token = null, bool fullDiagnostics = false)
+  public string CheckStatus()
   {
-    var args = new List<string> { "--test-connection" };
+    return ExecuteCommand("--check-status");
+  }
+
+
+  /// Checks system status with optional API URL and token parameters
+
+  public string CheckStatus(string? apiUrl = null, string? token = null)
+  {
+    var args = new List<string> { "--check-status" };
 
     if (!string.IsNullOrEmpty(apiUrl))
     {
@@ -233,43 +62,84 @@ public string TestConnection() {
     if (!string.IsNullOrEmpty(token))
       args.Add($"--token \"{token}\"");
 
-    if (fullDiagnostics)
-      args.Add("--full");
-
     return ExecuteCommand(string.Join(" ", args));
   }
 
-public string ExportConfig() {
-    return ExecuteCommand("--export-config");
-}
+  /// Authenticates with SSO using username and password
 
-public string ExportConfig(string outputDirectory, string? configId = null, bool overwrite = false) {
-    if (string.IsNullOrWhiteSpace(outputDirectory)) {
-        throw new ArgumentException("Output directory cannot be empty", nameof(outputDirectory));
+  public string Authentication(string username, string password)
+  {
+    if (string.IsNullOrWhiteSpace(username))
+    {
+      throw new ArgumentException("Username cannot be empty or whitespace", nameof(username));
     }
 
-    if (!Directory.Exists(outputDirectory)) {
-        throw new DirectoryNotFoundException($"Directory not found: {outputDirectory}");
+    if (string.IsNullOrWhiteSpace(password))
+    {
+      throw new ArgumentException("Password cannot be empty or whitespace", nameof(password));
     }
 
-    var args = new List<string> { "--export-config" };
+    var escapedUsername = username.Replace("\"", "\\\"");
+    var escapedPassword = password.Replace("\"", "\\\"");
 
-    args.Add($"--output \"{outputDirectory}\"");
+    return ExecuteCommand($"--authentication --username \"{escapedUsername}\" --password \"{escapedPassword}\"");
+  }
 
-    if (!string.IsNullOrEmpty(configId)) {
-        args.Add($"--config-id \"{configId}\"");
+  /// Authenticates with SSO using a token
+
+  public string AuthenticationWithToken(string token)
+  {
+    if (string.IsNullOrWhiteSpace(token))
+    {
+      throw new ArgumentException("Token cannot be empty or whitespace", nameof(token));
     }
 
-    if (overwrite) {
-        args.Add("--overwrite");
-    }
+    var escapedToken = token.Replace("\"", "\\\"");
+    return ExecuteCommand($"--authentication --token \"{escapedToken}\"");
+  }
 
 
-    return ExecuteCommand(string.Join(" ", args));
-}
+  /// Creates a new user account and generates an associated API Key
+
+  public string CreateUser()
+  {
+    return ExecuteCommand("--create-user");
+  }
 
 
-  public string ExecuteCommand(string arguments)
+  /// Launches the configuration wizard for setting up database connections
+
+  public string Configure()
+  {
+    return ExecuteCommand("--configure");
+  }
+
+  /// Lists all available database configurations
+
+  public string ListConfigs()
+  {
+    return ExecuteCommand("--list-configs");
+  }
+
+  /// Displays the database schema for a configured database
+  public string ShowSchema()
+  {
+    return ExecuteCommand("--show-schema");
+  }
+
+  /// Displays information about the currently authenticated user
+  public string WhoAmI()
+  {
+    return ExecuteCommand("--woami");
+  }
+
+  /// Launches the web-based graphical user interface
+  public string Gui()
+  {
+    return ExecuteCommand("--gui");
+  }
+
+  private string ExecuteCommand(string arguments)
   {
     if (_verbose)
     {
