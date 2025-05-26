@@ -128,7 +128,7 @@ def _process_document_for_serialization(self, doc: Dict[str, Any]) -> Dict[str, 
     processed_doc = {}
     for field, value in doc.items():
         if field == "_id":
-            processed_doc[field] = self._process_document_for_serialization(value)
+            processed_doc[field] = str(value)
         elif isinstance(value, list):
             processed_items = []
             for item in value:
