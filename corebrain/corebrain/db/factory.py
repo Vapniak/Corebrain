@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 from corebrain.db.connector import DatabaseConnector
 from corebrain.db.connectors.sql import SQLConnector
-from corebrain.db.connectors.mongodb import MongoDBConnector
+from corebrain.db.connectors.nosql import NoSQLConnector
 
 def get_connector(db_config: Dict[str, Any], timeout: int = 10) -> DatabaseConnector:
     """
@@ -23,7 +23,7 @@ def get_connector(db_config: Dict[str, Any], timeout: int = 10) -> DatabaseConne
     
     if db_type == "sql":
         return SQLConnector(db_config, timeout)
-    elif db_type in ["nosql", "mongodb"] or engine == "mongodb":
-        return MongoDBConnector(db_config, timeout)
+    elif db_type == "nosql":
+        return NoSQLConnector(db_config, timeout)
     else:
         raise ValueError(f"Tipo de base de datos no soportado: {db_type}")

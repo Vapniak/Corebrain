@@ -34,12 +34,19 @@ class NoSQLConnector(DatabaseConnector):
           config (dict): Configuration dictionary containing connection parameters.
       '''
       super().__init__(config)
+
+      self.conn = None
+      self.cursor = None
+      self.engine = config.get("engine", "").lower()
+      self.config = config
+      self.connection_timeout = 30 # seconds
+      '''
       self.engine = config.get("engine", "").lower()
       self.client = None
       self.db = None
       self.config = config
       self.connection_timeout = 30 # seconds
-
+      '''
       match self.engine:
         case "mongodb":
             if not PYMONGO_IMPORTED:
@@ -55,6 +62,20 @@ class NoSQLConnector(DatabaseConnector):
             self.engine (str): Name of the database.
         '''
 
+        try:
+
+            start_time = time.time()
+
+            while time.time() - start_time < self.connection_timeout:
+                try:
+                    if self.engine == "mongodb":
+                        if not PYMONGO_IMPORTED:
+                            raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
+                        if not 
+
+
+
+        '''
         match self.engine:
             case "mongodb":
                 if not PYMONGO_IMPORTED:
@@ -126,6 +147,7 @@ class NoSQLConnector(DatabaseConnector):
             case _ :
               raise ValueError(f"Unsupported NoSQL database: {self.engine}")
         pass
+        '''
 
     def extract_schema(self, sample_limit: int = 5, collection_limit: Optional[int] = None, 
                       progress_callback: Optional[Callable] = None) -> Dict[str, Any]:

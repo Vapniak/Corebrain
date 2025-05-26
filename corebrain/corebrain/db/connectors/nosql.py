@@ -17,7 +17,7 @@ try:
     PYMONGO_IMPORTED = True
 except ImportError:
     PYMONGO_IMPORTED = False
-# Whe nadding new DB type write a try to it from user
+# When adding new DB type write a try to it from user
 
 from corebrain.db.connector import DatabaseConnector
 class NoSQLConnector(DatabaseConnector):

@@ -40,117 +40,67 @@ def extract_db_schema(db_config: Dict[str, Any]) -> Dict[str, Any]:
             # [Se mantiene igual]
             pass
         
-        # Manejar tanto "nosql" como "mongodb" como tipos válidos
-        elif db_type == "nosql" or db_type == "mongodb":
-            import pymongo
-            
-            # Determinar el motor (si existe)
-            engine = db_config.get("engine", "").lower()
-            
-            # Si no se especifica el engine o es mongodb, proceder
-            if not engine or engine == "mongodb":
-                if "connection_string" in db_config:
-                    client = pymongo.MongoClient(db_config["connection_string"])
-                else:
-                    # Diccionario de parámetros para MongoClient
-                    mongo_params = {
-                        "host": db_config.get("host", "localhost"),
-                        "port": db_config.get("port", 27017)
-                    }
-                    
-                    # Añadir credenciales solo si están presentes
-                    if db_config.get("user"):
-                        mongo_params["username"] = db_config["user"]
-                    if db_config.get("password"):
-                        mongo_params["password"] = db_config["password"]
-                    
-                    client = pymongo.MongoClient(**mongo_params)
-                
-                # Obtener la base de datos
-                db_name = db_config.get("database", "")
-                if not db_name:
-                    _print_colored("⚠️ Nombre de base de datos no especificado", "yellow")
-                    return schema
-                
-                try:
-                    db = client[db_name]
-                    collection_names = db.list_collection_names()
-                    
-                    # Procesar colecciones
-                    for collection_name in collection_names:
-                        collection = db[collection_name]
-                        
-                        # Obtener varios documentos de muestra
-                        try:
-                            sample_docs = list(collection.find().limit(5))
-                            
-                            # Extraer estructura de campos a partir de los documentos
-                            field_types = {}
-                            
-                            for doc in sample_docs:
-                                for field, value in doc.items():
-                                    if field != "_id":  # Ignoramos el _id de MongoDB
-                                        # Actualizar el tipo si no existe o combinar si hay diferentes tipos
-                                        field_type = type(value).__name__
-                                        if field not in field_types:
-                                            field_types[field] = field_type
-                                        elif field_types[field] != field_type:
-                                            field_types[field] = f"{field_types[field]}|{field_type}"
-                            
-                            # Convertir a formato esperado
-                            fields = [{"name": field, "type": type_name} for field, type_name in field_types.items()]
-                            
-                            # Convertir documentos a formato serializable
-                            sample_data = []
-                            for doc in sample_docs:
-                                serialized_doc = {}
-                                for key, value in doc.items():
-                                    if key == "_id":
-                                        serialized_doc[key] = str(value)
-                                    elif isinstance(value, (dict, list)):
-                                        serialized_doc[key] = str(value)  # Simplificar objetos anidados
-                                    else:
-                                        serialized_doc[key] = value
-                                sample_data.append(serialized_doc)
-                            
-                            # Guardar información de la colección
-                            schema["tables"][collection_name] = {
-                                "fields": fields,
-                                "sample_data": sample_data
+        # Manejar tanto "nosql" como tipos válidos
+        elif db_type == "nosql":
+            match db_config.get("engine", "").lower():
+                case "mongodb": 
+                    try: 
+                        import pymongo
+                        PYMONGO_IMPORTED = True
+                    except ImportError:
+                        PYMONGO_IMPORTED = False
+                    if not PYMONGO_IMPORTED:
+                        raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
+                    # Defying the engine 
+                    engine = db_config.get("engine", "").lower()
+
+                    if engine == "mongodb":
+                        if "connection_string" in db_config:
+                            client = pymongo.MongoClient(db_config["connection_string"])
+                        else:
+                            # Diccionario de parámetros para MongoClient
+                            mongo_params = {
+                                "host": db_config.get("host", "localhost"),
+                                "port": db_config.get("port", 27017)
                             }
-                        except Exception as e:
-                            _print_colored(f"Error al procesar colección {collection_name}: {str(e)}", "red")
-                            schema["tables"][collection_name] = {
-                                "fields": [],
-                                "sample_data": [],
-                                "error": str(e)
-                            }
-                
-                except Exception as e:
-                    _print_colored(f"Error al acceder a la base de datos MongoDB '{db_name}': {str(e)}", "red")
-                
-                finally:
-                    # Cerrar la conexión
-                    client.close()
-            else:
-                _print_colored(f"Motor de base de datos NoSQL no soportado: {engine}", "red")
-        
-        # Convertir el diccionario de tablas en una lista para mantener compatibilidad con el formato anterior
-        table_list = []
-        for table_name, table_info in schema["tables"].items():
-            table_data = {"name": table_name}
-            table_data.update(table_info)
-            table_list.append(table_data)
-        
-        # Guardar también la lista de tablas para mantener compatibilidad
-        schema["tables_list"] = table_list
-        
-        return schema
-    
-    except Exception as e:
-        _print_colored(f"Error al extraer el esquema de la base de datos: {str(e)}", "red")
-        # En caso de error, devolver un esquema vacío
-        return {"type": db_type, "tables": {}, "tables_list": []}
+                            
+                            # Añadir credenciales solo si están presentes
+                            if db_config.get("user"):
+                                mongo_params["username"] = db_config["user"]
+                            if db_config.get("password"):
+                                mongo_params["password"] = db_config["password"]
+                            
+                            client = pymongo.MongoClient(**mongo_params)
+                            db_name = db_config.get("database","")
+
+                            if not db_name:
+                                _print_colored("⚠️ Database is not specified", "yellow")
+                                return schema
+                            try:
+                                db = client[db_name]
+                                collection_names = db.list_collection_names()
+
+                                # Process collection
+
+                                for collection_name in collection_names:
+                                    collection = db[collection_name]
+
+                                    try:
+                                        sample_docs = list(collection.find().lkmit(5))
+
+                                        field_types = {}
+                                        
+
+
+                                    except Exception as e:
+                            except Exception as e:
+
+
+            
+            
+
+                    
+                    
 
 def extract_db_schema_direct(db_config: Dict[str, Any]) -> Dict[str, Any]:
     """
