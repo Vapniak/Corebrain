@@ -13,7 +13,7 @@ from corebrain.db.schema_file import get_schema_with_dynamic_import
 from corebrain.db.schema.optimizer import SchemaOptimizer
 from corebrain.db.schema.extractor import extract_db_schema
 
-# Exportación explícita de componentes públicos
+# Export public components
 __all__ = [
     'DatabaseConnector',
     'get_connector',
