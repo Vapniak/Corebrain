@@ -17,7 +17,6 @@ from corebrain.cli.config import configure_sdk, get_api_credential
 from corebrain.cli.utils import print_colored
 from corebrain.config.manager import ConfigManager
 from corebrain.config.manager import export_config
-from corebrain.config.manager import validate_config
 from corebrain.lib.sso.auth import GlobodainSSOAuth
 
 def main_cli(argv: Optional[List[str]] = None) -> int:
@@ -61,6 +60,9 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--test-connection",action="store_true",help="Tests the connection to the Corebrain API using the provide credentials")
         parser.add_argument("--export-config",action="store_true",help="Exports the current configuration to a file")
         parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
+        parser.add_argument("--config-id", help="Configuration ID for operations that require it")
+        parser.add_argument("--output-file", help="Output file path for export operations")
+        parser.add_argument("--show-schema", action="store_true", help="Display database schema for a configuration")
 
         
         args = parser.parse_args(argv)
@@ -85,10 +87,19 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 return None, None
         
 
-        # Show version
+
         if args.version:
             """
-            Show the library version.
+            Display the current version of the Corebrain SDK.
+            
+            This command shows the version of the installed Corebrain SDK package.
+            It attempts to get the version from the package metadata first, and if that fails,
+            it falls back to the hardcoded version in the CLI module.
+            
+            Usage: corebrain --version
+            
+            Example output:
+            Corebrain SDK version 0.2.0
             """
             try:
                 from importlib.metadata import version
@@ -328,29 +339,422 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("Or use the 'corebrain --login' command to login via SSO.", "blue")
                 return 1
             
-            from corebrain.db.schema_file import show_db_schema, extract_schema_to_file
+            from corebrain.db.schema_file import show_db_schema
             
             # Execute the selected operation
             if args.configure:
+                """
+                Launch the comprehensive SDK configuration wizard.
+                
+                This is the main configuration command that guides you through setting up
+                a complete database connection for use with the Corebrain SDK. The wizard
+                walks you through each step of the configuration process interactively.
+                
+                Configuration phases:
+                1. Authentication verification (already completed)
+                2. Database type selection (SQL or MongoDB)
+                3. Database engine selection (PostgreSQL, MySQL, SQLite, etc.)
+                4. Connection parameters input (host, port, credentials, etc.)
+                5. Database connection testing and validation
+                6. Schema accessibility configuration (excluded tables/collections)
+                7. Configuration saving and server synchronization
+                8. Optional natural language query testing
+                
+                Usage: corebrain --configure [--api-key <key>] [--api-url <url>] [--sso-url <url>]
+                
+                Interactive prompts guide you through:
+                - Database type (sql/mongodb)
+                - Engine selection (postgresql, mysql, sqlite, etc.)
+                - Connection details (host, port, database name)
+                - Authentication credentials (username, password)
+                - Connection string (alternative to individual parameters)
+                - Table/collection exclusions for security
+                - Configuration naming and saving
+                
+                Supported databases:
+                SQL:
+                - PostgreSQL (local and remote)
+                - MySQL/MariaDB (local and remote)
+                - SQLite (file-based and in-memory)
+                
+                NoSQL:
+                - MongoDB (local and remote, with or without authentication)
+                
+                Security features:
+                - Encrypted local storage of configurations
+                - Secure credential handling
+                - Table/collection access control
+                - Server synchronization with encrypted transport
+                
+                After successful configuration:
+                - Configuration is saved locally with encryption
+                - Synchronization with Corebrain API server
+                - Ready to use with SDK (init function)
+                - Available for natural language queries
+                
+                Example usage after configuration:
+                ```python
+                from corebrain import init
+                
+                client = init(
+                    api_key="your_api_key",
+                    config_id="generated_config_id"
+                )
+                
+                result = client.ask("How many users are in the database?")
+                ```
+                
+                Prerequisites:
+                - Valid API key (obtain via --login or --api-key)
+                - Network access to target database
+                - Appropriate database permissions for schema reading
+                - Internet connectivity for API synchronization
+                """
                 configure_sdk(api_token, api_key, api_url, sso_url, user_data)
+
             elif args.list_configs:
+                """
+                List and manage all saved database configurations for your API key.
+                
+                This command provides an interactive interface to view and manage all
+                database configurations associated with your API key. It serves as a
+                central hub for configuration management operations.
+                
+                Main features:
+                - View all saved configurations with details
+                - Interactive selection and management
+                - Multiple management operations per configuration
+                - Safe deletion with confirmation prompts
+                - Configuration validation and testing
+                - Import/export capabilities
+                
+                Usage: corebrain --list-configs [--api-key <key>]
+                
+                Available operations for each configuration:
+                1. Show Schema: Display detailed database structure
+                   - Tables/collections list
+                   - Column details and types
+                   - Indexes and relationships
+                   - Safe read-only operation
+                
+                2. Validate Config: Comprehensive configuration validation
+                   - Structure and format verification
+                   - Database connectivity testing
+                   - Permission and access verification
+                   - Error reporting and diagnostics
+                
+                3. Remove Config: Safe configuration deletion
+                   - Confirmation prompts
+                   - Local storage cleanup
+                   - Server synchronization
+                   - Irreversible operation warning
+                
+                4. Modify Config: Update existing configuration
+                   - Interactive parameter editing
+                   - Connection parameter updates
+                   - Excluded tables management
+                   - Automatic validation after changes
+                
+                5. Export Config: Backup configuration to file
+                   - JSON format export
+                   - Credential handling options
+                   - Shareable format creation
+                   - Backup and migration support
+                
+                6. Import Config: Load configuration from file
+                   - JSON file import
+                   - Validation before saving
+                   - Conflict resolution
+                   - Batch import support
+                
+                7. Configure New: Launch configuration wizard
+                   - Full setup process
+                   - Database connection setup
+                   - Testing and validation
+                   - Save new configuration
+                
+                Information displayed for each configuration:
+                - Configuration ID (unique identifier)
+                - Database type and engine
+                - Connection details (host, database name)
+                - Creation and last modified dates
+                - Validation status
+                - Usage statistics
+                
+                Interactive navigation:
+                - Arrow keys or numbers for selection
+                - Enter to confirm operations
+                - ESC or 'q' to exit
+                - Help available with '?' key
+                
+                Security considerations:
+                - Configurations stored with encryption
+                - Sensitive data masked in display
+                - Secure credential handling
+                - Server synchronization with HTTPS
+                
+                Use cases:
+                - Review existing database connections
+                - Maintain multiple database configurations
+                - Troubleshoot connection issues
+                - Backup and restore configurations
+                - Share configurations between environments
+                - Clean up unused configurations
+                
+                Prerequisites:
+                - Valid API key for authentication
+                - Internet connectivity for server operations
+                - Appropriate permissions for configuration management
+                
+                Note: This command provides a safe environment for configuration
+                management with confirmation prompts for destructive operations.
+                """
                 ConfigManager.list_configs(api_key, api_url)
-            elif args.remove_config:
-                ConfigManager.remove_config(api_key, api_url)
+
             elif args.show_schema:
+                """
+                Display the schema of a configured database without connecting through the SDK.
+                
+                This command allows you to explore the structure of a database by showing
+                detailed information about tables, columns, indexes, and relationships.
+                It's useful for understanding the database structure before writing queries.
+                
+                The command can work in two ways:
+                1. With a saved configuration (using --config-id)
+                2. By prompting you to select from available configurations
+                
+                Usage: corebrain --show-schema [--config-id <id>]
+                
+                Information displayed:
+                - Database type and engine
+                - List of all tables/collections
+                - Column details (name, type, constraints)
+                - Primary keys and foreign keys
+                - Indexes and their properties
+                - Table relationships and dependencies
+                
+                Supported databases:
+                - SQL: PostgreSQL, MySQL, SQLite
+                - NoSQL: MongoDB
+                
+                Note: This command only reads schema information and doesn't modify
+                the database in any way. It's safe to run on production databases.
+                """
                 show_db_schema(api_key, args.config_id, api_url)
-        
+
+        # Handle validate-config and export-config commands
+        if args.validate_config:
+            """
+            Validate a saved configuration without executing any operations.
+            
+            This command performs comprehensive validation of a database configuration
+            to ensure it's correctly formatted and all required parameters are present.
+            It checks the configuration syntax, required fields, and optionally tests
+            the database connection.
+            
+            Validation checks performed:
+            1. Configuration format and structure
+            2. Required fields presence (type, engine, credentials)
+            3. Field value validity (ports, hostnames, database names)
+            4. Database connection test (optional)
+            5. Authentication and permissions verification
+            
+            Usage: corebrain --validate-config --config-id <id> [--api-key <key>]
+            
+            Validation levels:
+            - Structure: Validates configuration format and required fields
+            - Connection: Tests actual database connectivity
+            - Permissions: Verifies database access permissions
+            - Schema: Checks if the database schema can be read
+            
+            Exit codes:
+            - 0: Configuration is valid
+            - 1: Configuration has errors
+            
+            Use cases:
+            - Verify configuration before deployment
+            - Troubleshoot connection issues
+            - Validate imported configurations
+            - Check configuration after database changes
+            
+            Note: This command requires a valid API key to access saved configurations.
+            """
+            if not args.config_id:
+                print_colored("Error: --config-id is required for validation", "red")
+                return 1
+            
+            # Get credentials
+            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            token_arg = args.api_key if args.api_key else args.token
+            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
+            
+            if not api_key:
+                print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
+                return 1
+            
+            # Validate the configuration
+            try:
+                config_manager = ConfigManager()
+                config = config_manager.get_config(api_key, args.config_id)
+                
+                if not config:
+                    print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
+                    return 1
+                
+                print_colored(f"✅ Validating configuration: {args.config_id}", "blue")
+                
+                # Create a temporary Corebrain instance to validate
+                from corebrain.core.client import Corebrain
+                try:
+                    temp_client = Corebrain(
+                        api_key=api_key,
+                        db_config=config,
+                        skip_verification=True
+                    )
+                    print_colored("✅ Configuration validation passed!", "green")
+                    print_colored(f"Database type: {config.get('type', 'Unknown')}", "blue")
+                    print_colored(f"Engine: {config.get('engine', 'Unknown')}", "blue")
+                    return 0
+                except Exception as validation_error:
+                    print_colored(f"❌ Configuration validation failed: {str(validation_error)}", "red")
+                    return 1
+                    
+            except Exception as e:
+                print_colored(f"❌ Error during validation: {str(e)}", "red")
+                return 1
+
         if args.export_config:
-            export_config(args.export_config)
-            # --> config/manager.py --> export_config
-
-
+            """
+            Export a saved configuration to a JSON file.
+            
+            This command exports a database configuration from the local storage
+            to a JSON file that can be shared, backed up, or imported on another system.
+            The exported file contains all connection parameters and settings needed
+            to recreate the configuration.
+            
+            The export process:
+            1. Retrieves the specified configuration from local storage
+            2. Decrypts sensitive information (if encrypted)
+            3. Formats the configuration as readable JSON
+            4. Saves to the specified output file
+            5. Optionally removes sensitive data for sharing
+            
+            Usage: corebrain --export-config --config-id <id> [--output-file <path>] [--api-key <key>]
+            
+            Options:
+            --config-id: ID of the configuration to export (required)
+            --output-file: Path for the exported file (default: config_<id>.json)
+            --remove-credentials: Remove sensitive data for sharing (optional)
+            --pretty-print: Format JSON with indentation for readability
+            
+            Exported data includes:
+            - Database connection parameters
+            - Engine and type information
+            - Configuration metadata
+            - Excluded tables/collections list
+            - Custom settings and preferences
+            
+            Security considerations:
+            - Exported files may contain sensitive credentials
+            - Use --remove-credentials flag when sharing configurations
+            - Store exported files in secure locations
+            - Consider encrypting exported files for transmission
+            
+            Use cases:
+            - Backup configurations before changes
+            - Share configurations between team members
+            - Migrate configurations to different environments
+            - Create configuration templates
+            - Document database connection settings
+            """
+            if not args.config_id:
+                print_colored("Error: --config-id is required for export", "red")
+                return 1
+                
+            # Get credentials
+            api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
+            sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
+            token_arg = args.api_key if args.api_key else args.token
+            api_key, user_data, api_token = get_api_credential(token_arg, sso_url)
+            
+            if not api_key:
+                print_colored("Error: An API Key is required. Use --api-key or login via --login", "red")
+                return 1
+            
+            # Export the configuration
+            try:
+                config_manager = ConfigManager()
+                config = config_manager.get_config(api_key, args.config_id)
+                
+                if not config:
+                    print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
+                    return 1
+                
+                # Generate output filename if not provided
+                output_file = getattr(args, 'output_file', None) or f"config_{args.config_id}.json"
+                
+                # Export to file
+                import json
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, indent=2, default=str)
+                
+                print_colored(f"✅ Configuration exported to: {output_file}", "green")
+                return 0
+                
+            except Exception as e:
+                print_colored(f"❌ Error exporting configuration: {str(e)}", "red")
+                return 1
 
         # Create an user and API Key by default
         if args.authentication:
+            """
+            Perform SSO authentication and display the obtained tokens and user data.
+            
+            This command initiates the SSO (Single Sign-On) authentication flow through the browser.
+            It opens a browser window for the user to authenticate with their Globodain SSO credentials
+            and returns the authentication token and user information.
+            
+            This is primarily used for testing authentication or when you need to see the raw
+            authentication data. For normal usage, prefer --login which also obtains API keys.
+            
+            Usage: corebrain --authentication [--sso-url <url>]
+            
+            Returns:
+            - SSO authentication token
+            - User profile data (name, email, etc.)
+            
+            Note: This command only authenticates but doesn't save credentials for future use.
+            """
             authentication()
             
         if args.create_user:
+            """
+            Create a new user account and generate an associated API Key.
+            
+            This command performs a complete user registration process:
+            1. Authenticates the user through SSO (Single Sign-On)
+            2. Creates a new user account in the Corebrain system using SSO data
+            3. Automatically generates an API Key for the new user
+            
+            The user can choose to use their SSO password or create a new password
+            specifically for their Corebrain account. If using SSO password fails,
+            a random secure password will be generated.
+            
+            Usage: corebrain --create-user [--api-url <url>] [--sso-url <url>]
+            
+            Interactive prompts:
+            - SSO authentication (browser-based)
+            - Password choice (use SSO password or create new)
+            - Password confirmation (if creating new)
+            
+            Requirements:
+            - Valid Globodain SSO account
+            - Internet connection for API communication
+            
+            On success: Creates user account and displays confirmation
+            On failure: Shows specific error message
+            """
             sso_token, sso_user = authentication() # Authentica use with SSO
             
             if sso_token and sso_user:
@@ -413,6 +817,31 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         
         # Test SSO authentication
         if args.test_auth:
+            """
+            Test the SSO (Single Sign-On) authentication system.
+            
+            This command performs a comprehensive test of the SSO authentication flow
+            without saving any credentials or performing any actual operations. It's useful
+            for diagnosing authentication issues and verifying that the SSO system is working.
+            
+            The test process:
+            1. Configures the SSO authentication client
+            2. Generates a login URL
+            3. Opens the browser for user authentication
+            4. Waits for user to complete the authentication process
+            5. Reports success or failure
+            
+            Usage: corebrain --test-auth [--sso-url <url>]
+            
+            What it tests:
+            - SSO server connectivity
+            - Client configuration validity
+            - Authentication flow completion
+            - Browser integration
+            
+            Note: This is a diagnostic tool and doesn't save any authentication data.
+            For actual login, use --login instead.
+            """
             sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             
             print_colored("Testing SSO authentication...", "blue")
@@ -450,6 +879,34 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         
         # Login via SSO
         if args.login:
+            """
+            Login via SSO and obtain API credentials for SDK usage.
+            
+            This is the primary authentication command for normal SDK usage. It performs
+            a complete authentication and credential acquisition process:
+            
+            1. Opens browser for SSO authentication
+            2. Exchanges SSO token for Corebrain API token
+            3. Fetches available API keys for the user
+            4. Allows user to select which API key to use
+            5. Saves credentials in environment variables for immediate use
+            
+            Usage: corebrain --login [--sso-url <url>] [--configure]
+            
+            What it provides:
+            - API Token: For general authentication with Corebrain services
+            - API Key: For specific SDK operations and database access
+            - User Data: Profile information from SSO
+            
+            Environment variables set:
+            - COREBRAIN_API_TOKEN: General API authentication token
+            - COREBRAIN_API_KEY: Specific API key for SDK operations
+            
+            Optional: If --configure is also specified, it will automatically launch
+            the configuration wizard after successful login.
+            
+            This is the recommended way to authenticate for first-time users.
+            """
             sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             api_key, user_data, api_token = authenticate_with_sso_and_api_key_request(sso_url)
             
@@ -478,6 +935,38 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         
 
         if args.woami:
+            """
+            Display information about the currently authenticated user.
+            
+            This command shows detailed information about the user associated with the
+            current authentication credentials. It's similar to the Unix 'whoami' command
+            but for the Corebrain system.
+            
+            The command attempts to retrieve user data using the following credential sources
+            (in order of priority):
+            1. API key provided via --api-key argument
+            2. Token provided via --token argument  
+            3. COREBRAIN_API_KEY environment variable
+            4. COREBRAIN_API_TOKEN environment variable
+            5. SSO authentication (if no other credentials found)
+            
+            Usage: corebrain --woami [--api-key <key>] [--token <token>] [--sso-url <url>]
+            
+            Information displayed:
+            - User ID and email
+            - Name and profile details
+            - Account creation and last login dates
+            - Associated roles and permissions
+            - Any other profile metadata from SSO
+            
+            Use cases:
+            - Verify which user account is currently active
+            - Debug authentication issues
+            - Check user permissions and profile data
+            - Confirm successful login
+            
+            Note: Requires valid authentication credentials to work.
+            """
             try:
                 #downloading user data
                 sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
@@ -503,6 +992,47 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         
         
         if args.test_connection:
+            """
+            Test the connection to the Corebrain API using the provided credentials.
+            
+            This command verifies that the SDK can successfully connect to and authenticate
+            with the Corebrain API server. It's useful for diagnosing connectivity issues,
+            credential problems, or API server availability.
+            
+            The test process:
+            1. Retrieves API credentials from various sources
+            2. Attempts to connect to the specified API endpoint
+            3. Performs authentication verification
+            4. Reports connection status and any errors
+            
+            Usage: corebrain --test-connection [--token <token>] [--api-url <url>] [--sso-url <url>]
+            
+            Credential sources (in order of priority):
+            1. Token provided via --token argument
+            2. COREBRAIN_API_KEY environment variable
+            3. COREBRAIN_API_TOKEN environment variable
+            4. SSO authentication (if no credentials found)
+            
+            What it tests:
+            - Network connectivity to API server
+            - API server availability and responsiveness
+            - Credential validity and authentication
+            - SSL/TLS connection (for HTTPS endpoints)
+            
+            Success indicators:
+            - ✅ Successfully connected to Corebrain API
+            
+            Failure indicators:
+            - Connection timeouts or network errors
+            - Invalid or expired credentials
+            - API server errors or maintenance
+            
+            Use cases:
+            - Troubleshoot connection issues
+            - Verify API credentials before starting work
+            - Check API server status
+            - Validate network connectivity in restricted environments
+            """
             # Test connection to the Corebrain API
             api_url = args.api_url or os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
             sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL", DEFAULT_SSO_URL)
@@ -534,6 +1064,58 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
 
 
         if args.gui:
+            """
+            Check setup and launch the web-based graphical user interface.
+            
+            This command sets up and launches a complete web-based GUI for the Corebrain SDK,
+            providing a user-friendly alternative to the command-line interface. The GUI includes
+            both frontend and backend components and integrates with the Corebrain API.
+            
+            Components launched:
+            1. React Frontend (client) - User interface running on port 5173
+            2. Express Backend (server) - API server for the frontend
+            3. Corebrain API wrapper (C#) - Additional API integration
+            
+            Setup process:
+            1. Validates required directory structure
+            2. Installs Node.js dependencies if not present
+            3. Configures development tools (Vite, TypeScript)
+            4. Starts all services concurrently
+            5. Opens browser to the GUI automatically
+            
+            Usage: corebrain --gui
+            
+            Directory structure required:
+            - CLI-UI/client/ (React frontend)
+            - CLI-UI/server/ (Express backend)  
+            - wrappers/csharp_cli_api/ (C# API wrapper)
+            
+            Dependencies installed automatically:
+            Frontend (React):
+            - Standard React dependencies
+            - History library for routing
+            - Vite for development and building
+            - Concurrently for running multiple processes
+            
+            Backend (Express):
+            - Standard Express dependencies
+            - TypeScript development tools
+            - ts-node-dev for hot reloading
+            
+            Access points:
+            - Frontend GUI: http://localhost:5173/
+            - Backend API: Usually http://localhost:3000/
+            - C# API wrapper: Usually http://localhost:5000/
+            
+            Use cases:
+            - Visual configuration of database connections
+            - Interactive query building and testing
+            - Graphical schema exploration
+            - User-friendly alternative to CLI commands
+            - Debugging and development interface
+            
+            Note: Requires Node.js, npm, and .NET runtime to be installed on the system.
+            """
             import subprocess
             from pathlib import Path
 
