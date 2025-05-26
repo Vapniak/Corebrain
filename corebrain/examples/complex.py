@@ -1,8 +1,8 @@
 from corebrain import init
 
-api_key = "sk_bH8rnkIHCDF1BlRmgS9s6QAK"
+api_key = "sk_NPNLbEAjxQm86u6OX97An5ev"
 #config_id = "c9913a04-a530-4ae3-a877-8e295be87f78" # MONGODB
-config_id = "8bdba894-34a7-4453-b665-e640d11fd463" # POSTGRES
+config_id = "be43981c-0015-4ba4-9861-f12e82f6805e" # POSTGRES
 
 # Initialize the SDK with API key and configuration ID
 corebrain = init(
