@@ -47,9 +47,6 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
         parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
         parser.add_argument("--list-configs", action="store_true", help="List available configurations")
-        parser.add_argument("--remove-config", action="store_true", help="Remove a configuration")
-        parser.add_argument("--show-schema", action="store_true", help="Show the schema of the configured database")
-        parser.add_argument("--extract-schema", action="store_true", help="Extract the database schema and save it to a file")
         parser.add_argument("--output-file", help="File to save the extracted schema")
         parser.add_argument("--config-id", help="Specific configuration ID to use")
         parser.add_argument("--token", help="Corebrain API token (any type)")
@@ -75,7 +72,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             if sso_token:
                 try:
                     print_colored("✅ Returning SSO Token.", "green")
-                    print_colored(f"{sso_user}", "blue")
+                    print_colored(f"{sso_token}", "blue")
                     print_colored("✅ Returning User data.", "green")
                     print_colored(f"{sso_user}", "blue")
                     return sso_token, sso_user
@@ -88,7 +85,17 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("❌ Could not authenticate with SSO.", "red")
                 return None, None
         
-        # Made by Lukasz
+
+        # Show version
+        if args.version:
+            try:
+                from importlib.metadata import version
+                sdk_version = version("corebrain")
+                print(f"Corebrain SDK version {sdk_version}")
+            except Exception:
+                print(f"Corebrain SDK version {__version__}")
+            return 0
+
         if args.export_config:
             export_config(args.export_config)
             # --> config/manager.py --> export_config
@@ -100,16 +107,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             return validate_config(args.config_id)
 
 
-        # Show version
-        if args.version:
-            try:
-                from importlib.metadata import version
-                sdk_version = version("corebrain")
-                print(f"Corebrain SDK version {sdk_version}")
-            except Exception:
-                print(f"Corebrain SDK version {__version__}")
-            return 0
-        
+
         # Create an user and API Key by default
         if args.authentication:
             authentication()
@@ -304,7 +302,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 return 1
         
         # Operations that require credentials: configure, list, remove or show schema
-        if args.configure or args.list_configs or args.remove_config or args.show_schema or args.extract_schema:
+        if args.configure or args.list_configs:
             # Get URLs
             api_url = args.api_url or os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
             sso_url = args.sso_url or os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
