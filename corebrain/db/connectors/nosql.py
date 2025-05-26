@@ -17,7 +17,14 @@ try:
     PYMONGO_IMPORTED = True
 except ImportError:
     PYMONGO_IMPORTED = False
-# Whe nadding new DB type write a try to it from user
+    # Whe nadding new DB type write a try to it from user
+
+try:
+    import corebrain.db.connectors.subconnectors.nosql.mongodb as mongodb_subconnector
+    MONGO_MODULES = True
+except ImportError:
+    MONGO_MODULES = False
+
 
 from corebrain.db.connector import DatabaseConnector
 class NoSQLConnector(DatabaseConnector):
@@ -170,178 +177,24 @@ class NoSQLConnector(DatabaseConnector):
                 "tables": {},
                 "tables_list": []
             }
-        
-        schema = {
-            "type": self.engine,
-            "database": self.db.name,
-            "tables": {},  # Depends on DB
-        }
-
         match self.engine:
             case "mongodb":
+
                 if not PYMONGO_IMPORTED:
                     raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
-                try:
-                    import corebrain.db.connectors.subconnectors.mongodb as mongodb_subconnector
-                    return mongodb_subconnector.extract_schema(self, sample_limit, collection_limit, progress_callback)
-                except ImportError:
-                    raise ImportError("Failed to import MongoDB subconnector. Please ensure it is installed correctly.")
+                if not MONGO_MODULES:
+                    raise ImportError("MongoDB subconnector modules are not available. Please check your installation.")
+                # Use the MongoDB subconnector to extract schema
+                return mongodb_subconnector.extract_schema(self, sample_limit, collection_limit, progress_callback)
             # If adding new db add thru self.engine variable          
             # Add case when is needed new DB type
             case _:
-                return schema
-        '''
-        match self.engine:
-            case "mongodb":
-                if not PYMONGO_IMPORTED:
-                    raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
-                if not self.client and not self.connect():
-                    return {
-                        "type": "mongodb",
-                        "tables": {},
-                        "tables_list": []
-                    }
-                schema = {
-                    "type": "mongodb",
+                return {
+                    "type": self.engine,
                     "database": self.db.name,
-                    "tables": {}, # In MongoDB, tables are collections
+                    "tables": {},  # Depends on DB
                 }
-                try:
-                    collections = self.db.list_collection_names()
-                    if collection_limit is not None and collection_limit > 0:
-                        collections = collections[:collection_limit]
-                    total_collections = len(collections)
-                    for i, collection_name in enumerate(collections):
-                        if progress_callback:
-                            progress_callback(i, total_collections, f"Processing collection: {collection_name}")
-                        collection = self.db[collection_name]
-
-                        try:
-                            doc_count = collection.count_documents({})
-                            if doc_count <= 0:
-                                schema["tables"][collection_name] = {
-                                    "fields": [],
-                                    "sample_data": [],
-                                    "count": 0,
-                                    "empty": True
-                                }
-                            else:
-                                sample_docs = list(collection.find().limit(sample_limit))
-                                fields = {}
-                                sample_data = []
-
-                                for doc in sample_docs:
-                                    self._extract_document_fields(doc, fields)
-                                    processed_doc = self._process_document_for_serialization(doc)
-                                    sample_data.append(processed_doc)
-
-                                formatted_fields = [{"name": field, "type": type_name} for field, type_name in fields.items()]
-
-                                schema["tables"][collection_name] = {
-                                    "fields": formatted_fields,
-                                    "sample_data": sample_data,
-                                    "count": doc_count,
-                                }
-                        except Exception as e:
-                            print(f"Error processing collection {collection_name}: {e}")
-                            schema["tables"][collection_name] = {
-                                "fields": [],
-                                "error": str(e)
-                            }
-                    # Convert the schema to a list of tables
-                    table_list = []
-                    for collection_name, collection_info in schema["tables"].items():
-                        table_data = {"name": collection_name}
-                        table_data.update(collection_info)
-                        table_list.append(table_data)
-                    schema["tables_list"] = table_list
-                    return schema
-                except Exception as e:
-                    print(f"Error extracting schema: {e}")
-                    return {
-                        "type": "mongodb",
-                        "tables": {},
-                        "tabbles_list": []
-                    }
-            # Add case when is needed new DB type
-            case _ :
-              raise ValueError(f"Unsupported NoSQL database: {self.engine}")
-        '''
-    def _extract_document_fields(self, doc: Dict[str, Any], fields: Dict[str, str], 
-                                prefix: str = "", max_depth: int = 3, current_depth: int = 0) -> None:
-            '''
-            
-            Recursively extract fields from a document and determine their types.
-            Args:
-                doc (Dict[str, Any]): The document to extract fields from.
-                fields (Dict[str, str]): Dictionary to store field names and types.
-                prefix (str): Prefix for nested fields.
-                max_depth (int): Maximum depth for nested fields.
-                current_depth (int): Current depth in the recursion.
-            '''
-            match self.engine:
-                case "mongodb":
-                    if not PYMONGO_IMPORTED:
-                        raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
-                    if current_depth >= max_depth:
-                        return
-                    for field, value in doc.items():
-                        if field == "_id":
-                            field_type = "ObjectId"
-                        elif isinstance(value, dict):
-                            if value and current_depth < max_depth - 1:
-                                self._extract_document_fields(value, fields, f"{prefix}{field}.", max_depth, current_depth + 1)
-                            else:
-                                field_type = f"array<{type(value[0]).__name__}>"
-                        else:
-                            field_type = "array"
-                    else:
-                        field_type = type(value).__name__
-
-                    field_key = f"{prefix}{field}"
-                    if field_key not in fields:
-                        fields[field_key] = field_type
-                # Add case when is needed new DB type
-                case _ :
-                  raise ValueError(f"Unsupported NoSQL database: {self.engine}")
-                
-    def _process_document_for_serialization(self, doc: Dict[str, Any]) -> Dict[str, Any]:
-        '''
-        Proccesig a document for serialization of a JSON.
-        Args:
-            doc (Dict[str, Any]): The document to process.
-        Returns:
-            Procesed document
-        '''
-        match self.engine:
-            case "mongodb":
-                if not PYMONGO_IMPORTED:
-                    raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
-                processed_doc = {}
-                for field, value in doc.items():
-                    if field == "_id":
-                        processed_doc[field] = self._process_document_for_serialization(value)
-                    elif isinstance(value, list):
-                        processed_items = []
-                        for item in value:
-                            if isinstance(item, dict):
-                                processed_items.append(self._process_document_for_serialization(item))
-                            elif hasattr(item, "__str__"):
-                                processed_items.append(str(item))
-                            else:
-                                processed_items.append(item)
-                        processed_doc[field] = processed_items
-                    # Convert fetch to ISO
-                    elif hasattr(value, 'isoformat'):
-                        processed_doc[field] = value.isoformat()
-                    # Convert data 
-                    else:
-                        processed_doc[field] = value
-                return processed_doc
-            # Add case when is needed new DB type
-            case _ :
-              raise ValueError(f"Unsupported NoSQL database: {self.engine}")
-            
+                    
     def execute_query(self, query: str) -> List[Dict[str, Any]]:
         """
         Runs a NoSQL (or other) query with improved error handling
@@ -352,68 +205,40 @@ class NoSQLConnector(DatabaseConnector):
         Returns:
             List of resulting documents.
         """
-
-        match self.engine:
-            case "nosql":
+        if not self.conn and not self.connect():
+            raise ConnectionError("Couldn't establish a connection with NoSQL database.")
+        
+        try:
+            if self.engine == "mongodb":
                 if not PYMONGO_IMPORTED:
-                    raise ImportError("Pymongo is not installed. Please install it to use NoSQL connector.")
-                
-                if not self.client and not self.connect():
-                    raise ConnectionError("Couldn't estabilish a connection with NoSQL")
-                
-                try:
-                    # Determine whether the query is a JSON string or a query in another format
-                    filter_dict, projection, collection_name, limit = self._parse_query(query)
-                    
-                    # Get the collection
-                    if not collection_name:
-                        raise ValueError("Name of the colletion not specified in the query")
-                        
-                    collection = self.db[collection_name]
-                    
-                    # Execute the query
-                    if projection:
-                        cursor = collection.find(filter_dict, projection).limit(limit or 100)
-                    else:
-                        cursor = collection.find(filter_dict).limit(limit or 100)
-                    
-                    # Convert the results to a serializable format
-                    results = []
-                    for doc in cursor:
-                        processed_doc = self._process_document_for_serialization(doc)
-                        results.append(processed_doc)
-                    
-                    return results
-                    
-                except Exception as e:
-                    # Reconnect and retry the query
-                    try:
-                        self.close()
-                        if self.connect():
-                            print("Reconnecting and retrying the query...")
-                            
-                            # Retry the query
-                            filter_dict, projection, collection_name, limit = self._parse_query(query)
-                            collection = self.db[collection_name]
-                            
-                            if projection:
-                                cursor = collection.find(filter_dict, projection).limit(limit or 100)
-                            else:
-                                cursor = collection.find(filter_dict).limit(limit or 100)
-                            
-                            results = []
-                            for doc in cursor:
-                                processed_doc = self._process_document_for_serialization(doc)
-                                results.append(processed_doc)
-                            
-                            return results
-                    except Exception as retry_error:
-                        # If retrying fails, show the original error
-                        raise Exception(f"Failed to execute the NoSQL query: {str(e)}")
-                    
-                    # This code is will be executed if the retry fails
-                    raise Exception(f"Failed to execute the NoSQL query (after the reconnection): {str(e)}")
-                
-            # Add case when is needed new DB type
-            case _ :
-                raise ValueError(f"Unsupported NoSQL database: {self.self.engine}")
+                    raise ImportError("pymongo is not installed. Please install it to use MongoDB connector.")
+                if not MONGO_MODULES:
+                    raise ImportError("MongoDB subconnector modules are not available. Please check your installation.")
+                # Use the MongoDB subconnector to execute the query
+                return mongodb_subconnector.execute_query(self, query)
+        except Exception as e:
+            try:
+                # Attempt to reconnect and retry the query
+                self.close()
+                if self.connect():
+                    print("Reconnecting and retrying the query...")
+                    return mongodb_subconnector.execute_query(self, query)
+            except Exception as retry_error:
+                # If retrying fails, show the original error
+                raise Exception(f"Failed to execute the NoSQL query: {str(e)}")
+    def close(self) -> None:
+        """
+        Close the connection to the NoSQL database.
+        """
+        if self.client:
+            self.client.close()
+            self.client = None
+            self.db = None
+            print(f"Connection to {self.engine} closed.")
+        else:
+            print(f"No active connection to {self.engine} to close.")
+    def __del__(self):
+        """
+        Destructor to ensure the connection is closed when the object is deleted.
+        """
+        self.close()
