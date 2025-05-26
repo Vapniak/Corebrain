@@ -32,7 +32,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
     """
         
     # Package version
-    __version__ = "0.1.0"
+    __version__ = "0.2.0"
 
     try:
         print_colored("Corebrain CLI started. Version ", __version__, "blue")
