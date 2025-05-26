@@ -105,14 +105,14 @@ class SQLConnector(DatabaseConnector):
                         
                 except (sqlite3.Error, mysql.connector.Error, psycopg2.Error) as e:
                     # Si el error no es de timeout, propagar la excepción
-                    if "timeout" not in str(e).lower() and "tiempo de espera" not in str(e).lower():
+                    if "timeout" not in str(e).lower() and "wait timeout" not in str(e).lower():
                         raise
                     
                     # Si es un error de timeout, esperamos un poco y reintentamos
                     time.sleep(1.0)
             
             # Si llegamos aquí, se agotó el tiempo de espera
-            raise TimeoutError(f"No se pudo conectar a la base de datos en {self.connection_timeout} segundos")
+            raise TimeoutError(f"Could not connect to the database in {self.connection_timeout} seconds")
                 
         except Exception as e:
             if self.conn:
@@ -122,7 +122,7 @@ class SQLConnector(DatabaseConnector):
                     pass
                 self.conn = None
             
-            print(f"Error al conectar a la base de datos: {str(e)}")
+            print(f"Error connecting to the database: {str(e)}")
             return False
     
     def extract_schema(self, sample_limit: int = 5, table_limit: Optional[int] = None, 
@@ -182,14 +182,14 @@ class SQLConnector(DatabaseConnector):
             elif self.engine == "postgresql":
                 return self._execute_postgresql_query(query)
             else:
-                raise ValueError(f"Motor de base de datos no soportado: {self.engine}")
+                raise ValueError(f"Database engine not supported: {self.engine}")
         
         except Exception as e:
             # Intentar reconectar y reintentar una vez
             try:
                 self.close()
                 if self.connect():
-                    print("Reconectando y reintentando consulta...")
+                    print("Reconnecting and retrying query...")
                     
                     if self.engine == "sqlite":
                         return self._execute_sqlite_query(query)
@@ -200,10 +200,10 @@ class SQLConnector(DatabaseConnector):
                     
             except Exception as retry_error:
                 # Si falla el reintento, propagar el error original
-                raise Exception(f"Error al ejecutar consulta: {str(e)}")
+                raise Exception(f"Error executing query: {str(e)}")
             
             # Si llegamos aquí sin retornar, ha habido un error en el reintento
-            raise Exception(f"Error al ejecutar consulta (después de reconexión): {str(e)}")
+            raise Exception(f"Error executing query (after reconnection): {str(e)}")
     
     def _execute_sqlite_query(self, query: str) -> List[Dict[str, Any]]:
         """Executes a query in SQLite."""
@@ -275,7 +275,7 @@ class SQLConnector(DatabaseConnector):
             for i, table_name in enumerate(tables):
                 # Reportar progreso si hay callback
                 if progress_callback:
-                    progress_callback(i, total_tables, f"Procesando tabla {table_name}")
+                    progress_callback(i, total_tables, f"Processing table {table_name}")
                 
                 # Extraer información de columnas
                 cursor.execute(f"PRAGMA table_info({table_name});")
@@ -309,12 +309,12 @@ class SQLConnector(DatabaseConnector):
                     schema["tables"][table_name]["sample_data"] = sample_data
                     
                 except Exception as e:
-                    print(f"Error al obtener muestra de datos para tabla {table_name}: {str(e)}")
+                    print(f"Error getting sample data for table {table_name}: {str(e)}") # TODO: Translate to English
             
             cursor.close()
             
         except Exception as e:
-            print(f"Error al extraer esquema SQLite: {str(e)}")
+            print(f"Error extracting SQLite schema: {str(e)}") # TODO: Translate to English
         
         # Crear la lista de tablas para compatibilidad
         table_list = []
@@ -372,7 +372,7 @@ class SQLConnector(DatabaseConnector):
             for i, table_name in enumerate(tables):
                 # Reportar progreso si hay callback
                 if progress_callback:
-                    progress_callback(i, total_tables, f"Procesando tabla {table_name}")
+                    progress_callback(i, total_tables, f"Processing table {table_name}")
                 
                 # Extraer información de columnas
                 cursor.execute(f"DESCRIBE `{table_name}`;")
@@ -405,12 +405,12 @@ class SQLConnector(DatabaseConnector):
                     schema["tables"][table_name]["sample_data"] = processed_samples
                     
                 except Exception as e:
-                    print(f"Error al obtener muestra de datos para tabla {table_name}: {str(e)}")
+                    print(f"Error getting sample data for table {table_name}: {str(e)}") # TODO: Translate to English
             
             cursor.close()
             
         except Exception as e:
-            print(f"Error al extraer esquema MySQL: {str(e)}")
+            print(f"Error extracting MySQL schema: {str(e)}") # TODO: Translate to English
         
         # Crear la lista de tablas para compatibilidad
         table_list = []
@@ -540,7 +540,7 @@ class SQLConnector(DatabaseConnector):
                         schema["tables"][full_name]["sample_data"] = sample_data
                         
                     except Exception as e:
-                        print(f"Error al obtener muestra de datos para tabla {full_name}: {str(e)}")
+                        print(f"Error getting sample data for table {full_name}: {str(e)}") # TODO: Translate to English
                 else:
                     # Registrar la tabla aunque no tenga columnas
                     schema["tables"][full_name] = {"columns": [], "sample_data": []}
@@ -548,7 +548,7 @@ class SQLConnector(DatabaseConnector):
             cursor.close()
             
         except Exception as e:
-            print(f"Error al extraer esquema PostgreSQL: {str(e)}")
+            print(f"Error extracting PostgreSQL schema: {str(e)}") # TODO: Translate to English
             
             # Intento de recuperación para diagnosticar problemas
             try:
@@ -558,7 +558,7 @@ class SQLConnector(DatabaseConnector):
                     # Verificar versión
                     recovery_cursor.execute("SELECT version();")
                     version = recovery_cursor.fetchone()
-                    print(f"Versión PostgreSQL: {version[0] if version else 'Desconocida'}")
+                    print(f"PostgreSQL version: {version[0] if version else 'Unknown'}")
                     
                     # Verificar permisos
                     recovery_cursor.execute("""
@@ -567,11 +567,11 @@ class SQLConnector(DatabaseConnector):
                     """)
                     perms = recovery_cursor.fetchone()
                     if perms:
-                        print(f"Permisos en esquema public: USAGE={perms[0]}, CREATE={perms[1]}")
+                        print(f"Permissions in public schema: USAGE={perms[0]}, CREATE={perms[1]}") # TODO: Translate to English
                         
                     recovery_cursor.close()
             except Exception as diag_err:
-                print(f"Error durante el diagnóstico: {str(diag_err)}")
+                print(f"Error during diagnosis: {str(diag_err)}") # TODO: Translate to English
         
         # Crear la lista de tablas para compatibilidad
         table_list = []
