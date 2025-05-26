@@ -163,7 +163,7 @@ class NoSQLConenctor(DatabaseConnector):
             # Process each collection
             total_collections = len(collections)
             for i, collection_name in enumerate(collections):
-                # Report progress if there's a callback
+                # Report progress if there is a callback
                 if progress_callback:
                     progress_callback(i, total_collections, f"Processing collection {collection_name}")
                 
@@ -191,7 +191,7 @@ class NoSQLConenctor(DatabaseConnector):
                             processed_doc = self._process_document_for_serialization(doc)
                             sample_data.append(processed_doc)
                         
-                        # Save to schema
+                        # Save to outline
                         schema["tables"][collection_name] = {
                             "fields": formatted_fields,
                             "sample_data": sample_data,
@@ -245,30 +245,30 @@ class NoSQLConenctor(DatabaseConnector):
             return
             
         for field, value in doc.items():
-            # Para _id y otros campos especiales
+            # For _id and other special fields
             if field == "_id":
                 field_type = "ObjectId"
             elif isinstance(value, dict):
                 if current_depth < max_depth - 1:
-                    # Recursión para campos anidados
+                    # Recursion for nested fields
                     self._extract_document_fields(value, fields, 
                                                 f"{prefix}{field}.", max_depth, current_depth + 1)
                 field_type = "object"
             elif isinstance(value, list):
                 if value and current_depth < max_depth - 1:
-                    # Si tenemos elementos en la lista, analizar el primero
+                    # If we have elements in the list, analyze the first one
                     if isinstance(value[0], dict):
                         self._extract_document_fields(value[0], fields, 
                                                     f"{prefix}{field}[].", max_depth, current_depth + 1)
                     else:
-                        # Para listas de tipos primitivos
+                        # For lists of primitive types
                         field_type = f"array<{type(value[0]).__name__}>"
                 else:
                     field_type = "array"
             else:
                 field_type = type(value).__name__
             
-            # Guardar el tipo del campo actual
+            # Save the current field type
             field_key = f"{prefix}{field}"
             if field_key not in fields:
                 fields[field_key] = field_type
@@ -285,13 +285,13 @@ class NoSQLConenctor(DatabaseConnector):
         """
         processed_doc = {}
         for field, value in doc.items():
-            # Convertir ObjectId a string
+            # Convert ObjectId to string
             if field == "_id":
                 processed_doc[field] = str(value)
-            # Manejar objetos anidados
+            # Handling nested objects
             elif isinstance(value, dict):
                 processed_doc[field] = self._process_document_for_serialization(value)
-            # Manejar arrays
+            # Handling arrays
             elif isinstance(value, list):
                 processed_items = []
                 for item in value:
@@ -302,10 +302,10 @@ class NoSQLConenctor(DatabaseConnector):
                     else:
                         processed_items.append(item)
                 processed_doc[field] = processed_items
-            # Convertir fechas a ISO
+            # Convert dates to ISO
             elif hasattr(value, 'isoformat'):
                 processed_doc[field] = value.isoformat()
-            # Otros tipos de datos
+            # Other types of data
             else:
                 processed_doc[field] = value
                 
@@ -325,22 +325,22 @@ class NoSQLConenctor(DatabaseConnector):
             raise ConnectionError("No se pudo establecer conexión con MongoDB")
         
         try:
-            # Determinar si la consulta es un string JSON o una consulta en otro formato
+            # Determine whether the query is a JSON string or a query in another format
             filter_dict, projection, collection_name, limit = self._parse_query(query)
             
-            # Obtener la colección
+            # Get the collection
             if not collection_name:
                 raise ValueError("No se especificó el nombre de la colección en la consulta")
                 
             collection = self.db[collection_name]
             
-            # Ejecutar la consulta
+            # Run the query
             if projection:
                 cursor = collection.find(filter_dict, projection).limit(limit or 100)
             else:
                 cursor = collection.find(filter_dict).limit(limit or 100)
             
-            # Convertir los resultados a formato serializable
+            # Convert results to serializable format
             results = []
             for doc in cursor:
                 processed_doc = self._process_document_for_serialization(doc)
@@ -349,13 +349,13 @@ class NoSQLConenctor(DatabaseConnector):
             return results
             
         except Exception as e:
-            # Intentar reconectar y reintentar una vez
+            # Try to reconnect and try again once
             try:
                 self.close()
                 if self.connect():
                     print("Reconectando y reintentando consulta...")
                     
-                    # Reintentar la consulta
+                    # Retry the query
                     filter_dict, projection, collection_name, limit = self._parse_query(query)
                     collection = self.db[collection_name]
                     
@@ -371,10 +371,10 @@ class NoSQLConenctor(DatabaseConnector):
                     
                     return results
             except Exception as retry_error:
-                # Si falla el reintento, propagar el error original
+                # If the retry fails, propagate the original error
                 raise Exception(f"Error al ejecutar consulta MongoDB: {str(e)}")
             
-            # Si llegamos aquí, ha habido un error en el reintento
+            # If we get here, there was an error in the retry.
             raise Exception(f"Error al ejecutar consulta MongoDB (después de reconexión): {str(e)}")
     
     def _parse_query(self, query: str) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], str, Optional[int]]:
@@ -387,11 +387,11 @@ class NoSQLConenctor(DatabaseConnector):
         Returns:
             Tuple with (filter, projection, collection name, limit)
         """
-        # Intentar parsear como JSON
+        # Trying to parse as JSON
         try:
             query_dict = json.loads(query)
             
-            # Extraer componentes de la consulta
+            # Extract components from the query
             filter_dict = query_dict.get("filter", {})
             projection = query_dict.get("projection")
             collection_name = query_dict.get("collection")
@@ -400,22 +400,22 @@ class NoSQLConenctor(DatabaseConnector):
             return filter_dict, projection, collection_name, limit
             
         except json.JSONDecodeError:
-            # Si no es JSON válido, intentar parsear el formato de consulta alternativo
+            # If not valid JSON, attempt to parse the alternative query format
             collection_match = re.search(r'from\s+([a-zA-Z0-9_]+)', query, re.IGNORECASE)
             collection_name = collection_match.group(1) if collection_match else None
             
-            # Intentar extraer filtros
+            # Try to extract filters
             filter_match = re.search(r'where\s+(.+?)(?:limit|$)', query, re.IGNORECASE | re.DOTALL)
             filter_str = filter_match.group(1).strip() if filter_match else "{}"
             
-            # Intentar parsear los filtros como JSON
+            # Try to parse the filters as JSON
             try:
                 filter_dict = json.loads(filter_str)
             except json.JSONDecodeError:
-                # Si no se puede parsear, usar filtro vacío
+                # If parsing is not possible, use empty filter
                 filter_dict = {}
             
-            # Extraer límite si existe
+            # Extract limit if it exists
             limit_match = re.search(r'limit\s+(\d+)', query, re.IGNORECASE)
             limit = int(limit_match.group(1)) if limit_match else None
             
