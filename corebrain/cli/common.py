@@ -2,7 +2,7 @@
 Default values for SSO and API connection
 """
 
-DEFAULT_API_URL = "http://localhost:8000"
+DEFAULT_API_URL = "http://localhost:5000"
 #DEFAULT_SSO_URL = "http://localhost:3000" # localhost
 DEFAULT_SSO_URL = "https://sso.globodain.com" # remote
 DEFAULT_PORT = 8765
