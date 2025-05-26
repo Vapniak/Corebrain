@@ -53,15 +53,10 @@ def extract_db_schema(db_config: Dict[str, Any], client_factory: Optional[Callab
                 import psycopg2
                 # (implementación...)
                 
-        elif db_type == "nosql":
-            engine = db_config.get("engine", "").lower()
-            if engine == "mongodb":
+        elif db_type in ["nosql", "mongodb"]:
             # Extraer esquema MongoDB
-                try:
-                    import pymongo
-                except ImportError:
-                    logger.error("pymongo in not installed. Use 'pip install pymongo'.")
-                # (implementación...)
+            import pymongo
+            # (implementación...)
             
         # Convertir diccionario a lista para compatibilidad
         table_list = []
