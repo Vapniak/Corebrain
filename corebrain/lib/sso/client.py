@@ -187,7 +187,7 @@ class GlobodainSSOClient:
         if response.status_code != 200:
             raise Exception(f"Error al cerrar sesión: {response.text}")
         
-        # Limpiar cualquier token cacheado
+        # Clear any cached tokens
         if access_token in self._token_cache:
             del self._token_cache[access_token]
         
