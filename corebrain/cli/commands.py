@@ -47,8 +47,6 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--create-user", action="store_true", help="Create an user and API Key by default")
         parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
         parser.add_argument("--list-configs", action="store_true", help="List available configurations")
-        parser.add_argument("--output-file", help="File to save the extracted schema")
-        parser.add_argument("--config-id", help="Specific configuration ID to use")
         parser.add_argument("--token", help="Corebrain API token (any type)")
         parser.add_argument("--api-key", help="Specific API Key for Corebrain")
         parser.add_argument("--api-url", help="Corebrain API URL")
