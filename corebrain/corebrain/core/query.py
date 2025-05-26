@@ -40,21 +40,21 @@ class QueryCache:
         else:
             self.cache_dir = Path.home() / ".corebrain_cache"
             
-        # Crear directorio de caché si no existe
+        # Create cache directory if it doesn't exist
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # Inicializar base de datos SQLite para metadatos
+        # Initialize SQLite database for metadata
         self.db_path = self.cache_dir / "cache_metadata.db"
         self._init_db()
         
-        print_colored(f"Caché inicializado en {self.cache_dir}", "blue")
+        print_colored(f"Cache initialized at {self.cache_dir}", "blue")
     
     def _init_db(self):
         """Initializes the SQLite database for cache metadata."""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
-        # Crear tabla de metadatos si no existe
+        # Create metadata table if it doesn't exist
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS cache_metadata (
             query_hash TEXT PRIMARY KEY,
@@ -71,21 +71,21 @@ class QueryCache:
     
     def _get_hash(self, query: str, config_id: str, collection_name: Optional[str] = None) -> str:
         """Generates a unique hash for the query."""
-        # Normalizar la consulta (eliminar espacios extra, convertir a minúsculas)
+        # Normalize the query (remove extra spaces, convert to lowercase)
         normalized_query = re.sub(r'\s+', ' ', query.lower().strip())
         
-        # Crear string compuesto para el hash
+        # Create composite string for the hash
         hash_input = f"{normalized_query}|{config_id}"
         if collection_name:
             hash_input += f"|{collection_name}"
             
-        # Generar el hash
+        # Generate the hash
         return hashlib.md5(hash_input.encode()).hexdigest()
     
     def _get_cache_path(self, query_hash: str) -> Path:
         """Gets the cache file path for a given hash."""
-        # Usar los primeros caracteres del hash para crear subdirectorios
-        # Esto evita tener demasiados archivos en un solo directorio
+        # Use the first characters of the hash to create subdirectories
+        # This avoids having too many files in a single directory
         subdir = query_hash[:2]
         cache_subdir = self.cache_dir / subdir
         cache_subdir.mkdir(exist_ok=True)
@@ -99,12 +99,12 @@ class QueryCache:
         
         now = datetime.now().isoformat()
         
-        # Verificar si el hash ya existe
+        # Check if the hash already exists
         cursor.execute("SELECT hit_count FROM cache_metadata WHERE query_hash = ?", (query_hash,))
         result = cursor.fetchone()
         
         if result:
-            # Actualizar entrada existente
+            # Update existing entry
             hit_count = result[0] + 1
             cursor.execute('''
             UPDATE cache_metadata 
@@ -112,7 +112,7 @@ class QueryCache:
             WHERE query_hash = ?
             ''', (now, hit_count, query_hash))
         else:
-            # Insertar nueva entrada
+            # Insert new entry
             cursor.execute('''
             INSERT INTO cache_metadata (query_hash, query, config_id, created_at, last_accessed, hit_count)
             VALUES (?, ?, ?, ?, ?, 1)
@@ -124,12 +124,12 @@ class QueryCache:
     def _update_memory_lru(self, query_hash: str):
         """Updates the LRU (Least Recently Used) list for the in-memory cache."""
         if query_hash in self.memory_lru:
-            # Mover al final (más recientemente usado)
+            # Move to the end (most recently used)
             self.memory_lru.remove(query_hash)
         
         self.memory_lru.append(query_hash)
         
-        # Si excedemos el límite, eliminar el elemento menos usado recientemente
+        # If we exceed the limit, remove the least recently used element
         if len(self.memory_lru) > self.memory_limit:
             oldest_hash = self.memory_lru.pop(0)
             if oldest_hash in self.memory_cache:
@@ -184,11 +184,11 @@ class QueryCache:
                     print_colored(f"Cache hit (disk): {query[:30]}...", "green")
                     return result
                 except Exception as e:
-                    print_colored(f"Error al cargar caché: {str(e)}", "red")
-                    # Si hay error al cargar, eliminar el archivo corrupto
+                    print_colored(f"Error loading cache: {str(e)}", "red")
+                    # If there's an error loading, remove the corrupted file
                     cache_path.unlink(missing_ok=True)
             else:
-                # Archivo expirado, eliminarlo
+                # Expired file, delete it
                 cache_path.unlink(missing_ok=True)
         
         return None
@@ -205,23 +205,23 @@ class QueryCache:
         """
         query_hash = self._get_hash(query, config_id, collection_name)
         
-        # 1. Guardar en caché de memoria
+        # 1. Save to memory cache
         self.memory_cache[query_hash] = result
         self.memory_timestamps[query_hash] = time.time()
         self._update_memory_lru(query_hash)
         
-        # 2. Guardar en caché persistente
+        # 2. Save to persistent cache
         try:
             cache_path = self._get_cache_path(query_hash)
             with open(cache_path, 'wb') as f:
                 pickle.dump(result, f)
             
-            # 3. Actualizar metadatos
+            # 3. Update metadata
             self._update_metadata(query_hash, query, config_id)
             
             print_colored(f"Cached: {query[:30]}...", "green")
         except Exception as e:
-            print_colored(f"Error al guardar en caché: {str(e)}", "red")
+            print_colored(f"Error saving to cache: {str(e)}", "red")
     
     def clear(self, older_than: int = None):
         """
@@ -230,7 +230,7 @@ class QueryCache:
         Args:
             older_than: Only clear entries older than this number of seconds
         """
-        # Limpiar caché en memoria
+        # Clear memory cache
         if older_than:
             current_time = time.time()
             keys_to_remove = [
@@ -250,15 +250,15 @@ class QueryCache:
             self.memory_timestamps.clear()
             self.memory_lru.clear()
         
-        # Limpiar caché en disco
+        # Clear disk cache
         if older_than:
             cutoff_time = time.time() - older_than
             
-            # Usar la base de datos para encontrar archivos antiguos
+            # Use the database to find old files
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
             
-            # Convertir cutoff_time a formato ISO
+            # Convert cutoff_time to ISO format
             cutoff_datetime = datetime.fromtimestamp(cutoff_time).isoformat()
             
             cursor.execute(
@@ -268,13 +268,13 @@ class QueryCache:
             
             old_hashes = [row[0] for row in cursor.fetchall()]
             
-            # Eliminar archivos antiguos
+            # Delete old files
             for query_hash in old_hashes:
                 cache_path = self._get_cache_path(query_hash)
                 if cache_path.exists():
                     cache_path.unlink()
                 
-                # Eliminar de la base de datos
+                # Delete from database
                 cursor.execute(
                     "DELETE FROM cache_metadata WHERE query_hash = ?",
                     (query_hash,)
@@ -283,13 +283,13 @@ class QueryCache:
             conn.commit()
             conn.close()
         else:
-            # Eliminar todos los archivos de caché
+            # Delete all cache files
             for subdir in self.cache_dir.iterdir():
                 if subdir.is_dir():
                     for cache_file in subdir.glob("*.cache"):
                         cache_file.unlink()
             
-            # Reiniciar la base de datos
+            # Reset the database
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
             cursor.execute("DELETE FROM cache_metadata")
@@ -298,27 +298,27 @@ class QueryCache:
     
     def get_stats(self) -> Dict[str, Any]:
         """Gets cache statistics."""
-        # Contar archivos en disco
+        # Count files on disk
         disk_count = 0
         for subdir in self.cache_dir.iterdir():
             if subdir.is_dir():
                 disk_count += len(list(subdir.glob("*.cache")))
         
-        # Obtener estadísticas de la base de datos
+        # Get database statistics
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
-        # Total de entradas
+        # Total entries
         cursor.execute("SELECT COUNT(*) FROM cache_metadata")
         total_entries = cursor.fetchone()[0]
         
-        # Consultas más frecuentes
+        # Most frequent queries
         cursor.execute(
             "SELECT query, hit_count FROM cache_metadata ORDER BY hit_count DESC LIMIT 5"
         )
         top_queries = cursor.fetchall()
         
-        # Edad promedio
+        # Average age
         cursor.execute(
             "SELECT AVG(strftime('%s', 'now') - strftime('%s', created_at)) FROM cache_metadata"
         )
@@ -361,27 +361,27 @@ class QueryTemplate:
         self.db_type = db_type
         self.applicable_tables = applicable_tables or []
         
-        # Compilar expresión regular para el patrón
+        # Compile regular expression for the pattern
         self.regex = self._compile_pattern(pattern)
     
     def _compile_pattern(self, pattern: str) -> re.Pattern:
         """Compiles the pattern into a regular expression."""
-        # Reemplazar marcadores especiales con grupos de captura
+        # Replace special markers with capture groups
         regex_pattern = pattern
         
-        # {table} se convierte en grupo de captura para el nombre de tabla
+        # {table} becomes capture group for table name
         regex_pattern = regex_pattern.replace("{table}", r"(\w+)")
         
-        # {field} se convierte en grupo de captura para el nombre de campo
+        # {field} becomes capture group for field name
         regex_pattern = regex_pattern.replace("{field}", r"(\w+)")
         
-        # {value} se convierte en grupo de captura para un valor
+        # {value} becomes capture group for a value
         regex_pattern = regex_pattern.replace("{value}", r"([^,.\s]+)")
         
-        # {number} se convierte en grupo de captura para un número
+        # {number} becomes capture group for a number
         regex_pattern = regex_pattern.replace("{number}", r"(\d+)")
         
-        # Hacer coincidir el patrón completo
+        # Make the pattern match the entire string
         regex_pattern = f"^{regex_pattern}$"
         
         return re.compile(regex_pattern, re.IGNORECASE)
@@ -413,22 +413,22 @@ class QueryTemplate:
             Generated query or None if it cannot be generated
         """
         if self.generator_func:
-            # Usar función personalizada
+            # Use custom function
             return self.generator_func(params, db_schema)
         
         if not self.sql_template:
             return None
             
-        # Intentar aplicar la plantilla SQL con los parámetros
+        # Try applying the SQL template with the parameters
         try:
             sql_query = self.sql_template
             
-            # Reemplazar parámetros en la plantilla
+            # Replace parameters in the template
             for i, param in enumerate(params):
                 placeholder = f"${i+1}"
                 sql_query = sql_query.replace(placeholder, param)
             
-            # Verificar si hay algún parámetro sin reemplazar
+            # Check if there are any parameters left unreplaced
             if "$" in sql_query:
                 return None
                 

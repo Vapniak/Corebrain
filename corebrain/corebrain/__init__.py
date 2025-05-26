@@ -7,16 +7,13 @@ and enables natural language queries to relational and non-relational databases.
 import logging
 from typing import Dict, Any, List, Optional
 
-# Configuración básica de logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# Importaciones seguras (sin dependencias circulares)
 from corebrain.db.engines import get_available_engines
 from corebrain.core.client import Corebrain
 from corebrain.config.manager import ConfigManager
 
-# Exportación explícita de componentes públicos
 __all__ = [
     'init',
     'extract_db_schema',
@@ -27,7 +24,6 @@ __all__ = [
     '__version__'
 ]
 
-# Variable de versión
 __version__ = "1.0.0"
 
 def init(api_key: str, config_id: str, skip_verification: bool = False) -> Corebrain:
@@ -43,7 +39,6 @@ def init(api_key: str, config_id: str, skip_verification: bool = False) -> Coreb
     """
     return Corebrain(api_key=api_key, config_id=config_id, skip_verification=skip_verification)
 
-# Funciones de conveniencia a nivel de paquete
 def list_configurations(api_key: str) -> List[str]:
     """
     Lists the available configurations for an API key.

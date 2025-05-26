@@ -31,10 +31,10 @@ class NoSQLConenctor(DatabaseConnector):
         self.client = None
         self.db = None
         self.config = config
-        self.connection_timeout = 30  # segundos
+        self.connection_timeout = 30  # seconds
         
         if not PYMONGO_AVAILABLE:
-            print("Advertencia: pymongo no está instalado. Instálalo con 'pip install pymongo'")
+            print("Warning: pymongo is not installed. Install it with 'pip install pymongo'")
     
     def connect(self) -> bool:
         """
@@ -44,87 +44,87 @@ class NoSQLConenctor(DatabaseConnector):
             True if the connection was successful, False otherwise
         """
         if not PYMONGO_AVAILABLE:
-            raise ImportError("pymongo no está instalado. Instálalo con 'pip install pymongo'")
+            raise ImportError("pymongo is not installed. Install it with 'pip install pymongo'")
         
         try:
             start_time = time.time()
             
-            # Construir los parámetros de conexión
+            # Build connection parameters
             if "connection_string" in self.config:
                 connection_string = self.config["connection_string"]
-                # Añadir timeout a la cadena de conexión si no está presente
+                # Add timeout to connection string if not present
                 if "connectTimeoutMS=" not in connection_string:
                     if "?" in connection_string:
-                        connection_string += "&connectTimeoutMS=10000"  # 10 segundos
+                        connection_string += "&connectTimeoutMS=10000"  # 10 seconds
                     else:
                         connection_string += "?connectTimeoutMS=10000"
                 
-                # Crear cliente MongoDB con la cadena de conexión
+                # Create MongoDB client with connection string
                 self.client = pymongo.MongoClient(connection_string)
             else:
-                # Diccionario de parámetros para MongoClient
+                # Dictionary of parameters for MongoClient
                 mongo_params = {
                     "host": self.config.get("host", "localhost"),
                     "port": int(self.config.get("port", 27017)),
-                    "connectTimeoutMS": 10000,  # 10 segundos
+                    "connectTimeoutMS": 10000,  # 10 seconds
                     "serverSelectionTimeoutMS": 10000
                 }
                 
-                # Añadir credenciales solo si están presentes
+                # Add credentials only if present
                 if self.config.get("user"):
                     mongo_params["username"] = self.config.get("user")
                 if self.config.get("password"):
                     mongo_params["password"] = self.config.get("password")
                 
-                # Opcionalmente añadir opciones de autenticación
+                # Optionally add authentication options
                 if self.config.get("auth_source"):
                     mongo_params["authSource"] = self.config.get("auth_source")
                 if self.config.get("auth_mechanism"):
                     mongo_params["authMechanism"] = self.config.get("auth_mechanism")
                 
-                # Crear cliente MongoDB con parámetros
+                # Create MongoDB client with parameters
                 self.client = pymongo.MongoClient(**mongo_params)
             
-            # Verificar que la conexión funciona
+            # Verify that the connection works
             self.client.admin.command('ping')
             
-            # Seleccionar la base de datos
+            # Select the database
             db_name = self.config.get("database", "")
             if not db_name:
-                # Si no hay base de datos especificada, listar las disponibles
+                # If no database is specified, list available ones
                 db_names = self.client.list_database_names()
                 if not db_names:
-                    raise ValueError("No se encontraron bases de datos disponibles")
+                    raise ValueError("No available databases found")
                 
-                # Seleccionar la primera que no sea de sistema
+                # Select the first one that is not a system database
                 system_dbs = ["admin", "local", "config"]
                 for name in db_names:
                     if name not in system_dbs:
                         db_name = name
                         break
                 
-                # Si no encontramos ninguna que no sea de sistema, usar la primera
+                # If we don't find any non-system database, use the first one
                 if not db_name:
                     db_name = db_names[0]
                 
-                print(f"No se especificó base de datos. Usando '{db_name}'")
+                print(f"No database specified. Using '{db_name}'")
             
-            # Guardar la referencia a la base de datos
+            # Save the reference to the database
             self.db = self.client[db_name]
             return True
             
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            # Si es un error de timeout, reintentar
+            # If it's a timeout error, retry
             if time.time() - start_time < self.connection_timeout:
-                print(f"Timeout al conectar a MongoDB: {str(e)}. Reintentando...")
-                time.sleep(2)  # Esperar antes de reintentar
+                print(f"Timeout connecting to MongoDB: {str(e)}. Retrying...")
+                time.sleep(2)  # Wait before retrying
                 return self.connect()
             else:
-                print(f"Error de conexión a MongoDB después de {self.connection_timeout}s: {str(e)}")
+                print(f"MongoDB connection error after {self.connection_timeout}s: {str(e)}")
                 self.close()
                 return False
         except Exception as e:
-            print(f"Error al conectar a MongoDB: {str(e)}")
+            print(f"Error connecting to MongoDB: {str(e)}")
             self.close()
             return False
     
@@ -141,64 +141,64 @@ class NoSQLConenctor(DatabaseConnector):
         Returns:
             Dictionary with the database schema
         """
-        # Asegurar que estamos conectados
+        # Ensure we are connected
         if not self.client and not self.connect():
             return {"type": "mongodb", "tables": {}, "tables_list": []}
         
-        # Inicializar el esquema
+        # Initialize the schema
         schema = {
             "type": "mongodb",
             "database": self.db.name,
-            "tables": {}  # En MongoDB, las "tablas" son colecciones
+            "tables": {}  # In MongoDB, "tables" are collections
         }
         
         try:
-            # Obtener la lista de colecciones
+            # Get the list of collections
             collections = self.db.list_collection_names()
             
-            # Limitar colecciones si es necesario
+            # Limit collections if necessary
             if collection_limit is not None and collection_limit > 0:
                 collections = collections[:collection_limit]
             
-            # Procesar cada colección
+            # Process each collection
             total_collections = len(collections)
             for i, collection_name in enumerate(collections):
-                # Reportar progreso si hay callback
+                # Report progress if there's a callback
                 if progress_callback:
-                    progress_callback(i, total_collections, f"Procesando colección {collection_name}")
+                    progress_callback(i, total_collections, f"Processing collection {collection_name}")
                 
                 collection = self.db[collection_name]
                 
                 try:
-                    # Contar documentos
+                    # Count documents
                     doc_count = collection.count_documents({})
                     
                     if doc_count > 0:
-                        # Obtener muestra de documentos
+                        # Get sample documents
                         sample_docs = list(collection.find().limit(sample_limit))
                         
-                        # Extraer campos y sus tipos
+                        # Extract fields and their types
                         fields = {}
                         for doc in sample_docs:
                             self._extract_document_fields(doc, fields)
                         
-                        # Convertir a formato esperado
+                        # Convert to expected format
                         formatted_fields = [{"name": field, "type": type_name} for field, type_name in fields.items()]
                         
-                        # Procesar documentos para sample_data
+                        # Process documents for sample_data
                         sample_data = []
                         for doc in sample_docs:
                             processed_doc = self._process_document_for_serialization(doc)
                             sample_data.append(processed_doc)
                         
-                        # Guardar en el esquema
+                        # Save to schema
                         schema["tables"][collection_name] = {
                             "fields": formatted_fields,
                             "sample_data": sample_data,
                             "count": doc_count
                         }
                     else:
-                        # Colección vacía
+                        # Empty collection
                         schema["tables"][collection_name] = {
                             "fields": [],
                             "sample_data": [],
@@ -207,26 +207,26 @@ class NoSQLConenctor(DatabaseConnector):
                         }
                         
                 except Exception as e:
-                    print(f"Error al procesar colección {collection_name}: {str(e)}")
+                    print(f"Error processing collection {collection_name}: {str(e)}")
                     schema["tables"][collection_name] = {
                         "fields": [],
                         "error": str(e)
                     }
             
-            # Crear la lista de tablas/colecciones para compatibilidad
+            # Create the list of tables/collections for compatibility
             table_list = []
             for collection_name, collection_info in schema["tables"].items():
                 table_data = {"name": collection_name}
                 table_data.update(collection_info)
                 table_list.append(table_data)
             
-            # Guardar también la lista de tablas para compatibilidad
+            # Also save the list of tables for compatibility
             schema["tables_list"] = table_list
             
             return schema
             
         except Exception as e:
-            print(f"Error al extraer el esquema MongoDB: {str(e)}")
+            print(f"Error extracting MongoDB schema: {str(e)}")
             return {"type": "mongodb", "tables": {}, "tables_list": []}
     
     def _extract_document_fields(self, doc: Dict[str, Any], fields: Dict[str, str], 

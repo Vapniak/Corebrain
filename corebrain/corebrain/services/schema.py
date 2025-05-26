@@ -28,4 +28,3 @@ class SchemaService:
         """Optimizes an existing schema."""
         return self.schema_optimizer.optimize_schema(schema, query)
     
-    # Otros métodos de servicio...

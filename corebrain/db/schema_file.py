@@ -36,8 +36,6 @@ def extract_db_schema(db_config: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         if db_type == "sql":
-            # Code for SQL databases...
-            # [Kept the same]
             pass
         
         # Handle both "nosql" and "mongodb" as valid types

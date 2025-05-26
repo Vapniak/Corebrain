@@ -33,7 +33,7 @@ class SQLConnector(DatabaseConnector):
         self.cursor = None
         self.engine = config.get("engine", "").lower()
         self.config = config
-        self.connection_timeout = 30  # segundos
+        self.connection_timeout = 30  # seconds
     
     def connect(self) -> bool:
         """
@@ -45,7 +45,7 @@ class SQLConnector(DatabaseConnector):
         try:
             start_time = time.time()
             
-            # Intentar la conexión con un límite de tiempo
+            # Try the connection with a time limit
             while time.time() - start_time < self.connection_timeout:
                 try:
                     if self.engine == "sqlite":
@@ -54,7 +54,7 @@ class SQLConnector(DatabaseConnector):
                         else:
                             self.conn = sqlite3.connect(self.config.get("database", ""), timeout=10.0)
                         
-                        # Configurar para que devuelva filas como diccionarios
+                        # Configure to return rows as dictionaries
                         self.conn.row_factory = sqlite3.Row
                         
                     elif self.engine == "mysql":
@@ -74,9 +74,9 @@ class SQLConnector(DatabaseConnector):
                             )
                     
                     elif self.engine == "postgresql":
-                        # Determinar si usar cadena de conexión o parámetros
+                        # Determine whether to use connection string or parameters
                         if "connection_string" in self.config:
-                            # Agregar timeout a la cadena de conexión si no está presente
+                            # Add timeout to connection string if not present
                             conn_str = self.config["connection_string"]
                             if "connect_timeout" not in conn_str:
                                 if "?" in conn_str:
@@ -95,24 +95,24 @@ class SQLConnector(DatabaseConnector):
                                 connect_timeout=10
                             )
                     
-                    # Si llegamos aquí, la conexión fue exitosa
+                    # If we get here, the connection was successful
                     if self.conn:
-                        # Verificar conexión con una consulta simple
+                        # Verify connection with a simple query
                         cursor = self.conn.cursor()
                         cursor.execute("SELECT 1")
                         cursor.close()
                         return True
                         
                 except (sqlite3.Error, mysql.connector.Error, psycopg2.Error) as e:
-                    # Si el error no es de timeout, propagar la excepción
+                    # If the error is not a timeout, propagate the exception
                     if "timeout" not in str(e).lower() and "tiempo de espera" not in str(e).lower():
                         raise
                     
-                    # Si es un error de timeout, esperamos un poco y reintentamos
+                    # If it's a timeout error, wait a bit and retry
                     time.sleep(1.0)
             
-            # Si llegamos aquí, se agotó el tiempo de espera
-            raise TimeoutError(f"No se pudo conectar a la base de datos en {self.connection_timeout} segundos")
+            # If we get here, the timeout was exceeded
+            raise TimeoutError(f"Could not connect to database in {self.connection_timeout} seconds")
                 
         except Exception as e:
             if self.conn:
@@ -122,7 +122,7 @@ class SQLConnector(DatabaseConnector):
                     pass
                 self.conn = None
             
-            print(f"Error al conectar a la base de datos: {str(e)}")
+            print(f"Error connecting to database: {str(e)}")
             return False
     
     def extract_schema(self, sample_limit: int = 5, table_limit: Optional[int] = None, 
@@ -138,11 +138,11 @@ class SQLConnector(DatabaseConnector):
         Returns:
             Dictionary with the database schema
         """
-        # Asegurar que estamos conectados
+        # Ensure we are connected
         if not self.conn and not self.connect():
             return {"type": "sql", "tables": {}, "tables_list": []}
         
-        # Inicializar esquema
+        # Initialize schema
         schema = {
             "type": "sql",
             "engine": self.engine,
@@ -150,7 +150,7 @@ class SQLConnector(DatabaseConnector):
             "tables": {}
         }
         
-        # Seleccionar la función extractora según el motor
+        # Select the extractor function according to the engine
         if self.engine == "sqlite":
             return self._extract_sqlite_schema(sample_limit, table_limit, progress_callback)
         elif self.engine == "mysql":
@@ -158,7 +158,7 @@ class SQLConnector(DatabaseConnector):
         elif self.engine == "postgresql":
             return self._extract_postgresql_schema(sample_limit, table_limit, progress_callback)
         else:
-            return schema  # Esquema vacío si no se reconoce el motor
+            return schema  # Empty schema if engine is not recognized
     
     def execute_query(self, query: str) -> List[Dict[str, Any]]:
         """
@@ -171,10 +171,10 @@ class SQLConnector(DatabaseConnector):
             List of resulting rows as dictionaries
         """
         if not self.conn and not self.connect():
-            raise ConnectionError("No se pudo establecer conexión con la base de datos")
+            raise ConnectionError("Could not establish connection to database")
         
         try:
-            # Ejecutar query según el motor
+            # Execute query according to engine
             if self.engine == "sqlite":
                 return self._execute_sqlite_query(query)
             elif self.engine == "mysql":
@@ -182,14 +182,14 @@ class SQLConnector(DatabaseConnector):
             elif self.engine == "postgresql":
                 return self._execute_postgresql_query(query)
             else:
-                raise ValueError(f"Motor de base de datos no soportado: {self.engine}")
+                raise ValueError(f"Unsupported database engine: {self.engine}")
         
         except Exception as e:
-            # Intentar reconectar y reintentar una vez
+            # Try to reconnect and retry once
             try:
                 self.close()
                 if self.connect():
-                    print("Reconectando y reintentando consulta...")
+                    print("Reconnecting and retrying query...")
                     
                     if self.engine == "sqlite":
                         return self._execute_sqlite_query(query)
@@ -199,11 +199,11 @@ class SQLConnector(DatabaseConnector):
                         return self._execute_postgresql_query(query)
                     
             except Exception as retry_error:
-                # Si falla el reintento, propagar el error original
-                raise Exception(f"Error al ejecutar consulta: {str(e)}")
+                # If retry fails, propagate the original error
+                raise Exception(f"Error executing query: {str(e)}")
             
-            # Si llegamos aquí sin retornar, ha habido un error en el reintento
-            raise Exception(f"Error al ejecutar consulta (después de reconexión): {str(e)}")
+            # If we get here without returning, there was an error in the retry
+            raise Exception(f"Error executing query (after reconnection): {str(e)}")
     
     def _execute_sqlite_query(self, query: str) -> List[Dict[str, Any]]:
         """Executes a query in SQLite."""

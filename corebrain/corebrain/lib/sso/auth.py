@@ -7,8 +7,8 @@ class GlobodainSSOAuth:
         self.config = config or {}
         self.logger = logging.getLogger(__name__)
         
-        # Configuración por defecto
-        self.sso_url = self.config.get('GLOBODAIN_SSO_URL', 'http://localhost:3000/login') # URL del SSO
+        # Default configuration
+        self.sso_url = self.config.get('GLOBODAIN_SSO_URL', 'http://localhost:3000/login') # SSO URL
         self.client_id = self.config.get('GLOBODAIN_CLIENT_ID', '')
         self.client_secret = self.config.get('GLOBODAIN_CLIENT_SECRET', '')
         self.redirect_uri = self.config.get('GLOBODAIN_REDIRECT_URI', '')
@@ -26,11 +26,11 @@ class GlobodainSSOAuth:
         """
         def decorator(func):
             def wrapper(*args, **kwargs):
-                # Obtener la sesión actual usando el manejador proporcionado
+                # Get the current session using the provided handler
                 session = session_handler()
                 
                 if 'user' not in session:
-                    # Aquí retornamos información para que el framework redirija
+                    # Here we return information for the framework to redirect
                     return {
                         'authenticated': False,
                         'redirect_url': self.get_login_url()
@@ -80,7 +80,7 @@ class GlobodainSSOAuth:
                 return response.json()
             return None
         except Exception as e:
-            self.logger.error(f"Error verificando token: {str(e)}")
+            self.logger.error(f"Error verifying token: {str(e)}")
             return None
     
     def get_user_info(self, token):
@@ -102,7 +102,7 @@ class GlobodainSSOAuth:
                 return response.json()
             return None
         except Exception as e:
-            self.logger.error(f"Error obteniendo info de usuario: {str(e)}")
+            self.logger.error(f"Error getting user info: {str(e)}")
             return None
     
     def exchange_code_for_token(self, code):
@@ -130,7 +130,7 @@ class GlobodainSSOAuth:
                 return response.json()
             return None
         except Exception as e:
-            self.logger.error(f"Error intercambiando código: {str(e)}")
+            self.logger.error(f"Error exchanging code: {str(e)}")
             return None
 
     def handle_callback(self, code, session_handler, store_user_func=None):
@@ -145,27 +145,27 @@ class GlobodainSSOAuth:
         Returns:
             Redirect URL after processing the code
         """
-        # Intercambiar código por token
+        # Exchange code for token
         token_data = self.exchange_code_for_token(code)
         if not token_data:
-            # Error al obtener el token
+            # Error getting the token
             return self.get_login_url()
         
-        # Obtener información del usuario
+        # Get user information
         user_info = self.get_user_info(token_data.get('access_token'))
         if not user_info:
-            # Error al obtener información del usuario
+            # Error getting user information
             return self.get_login_url()
         
-        # Guardar información en la sesión
+        # Save information in the session
         session = session_handler()
         session['user'] = user_info
         session['token'] = token_data
         
-        # Si hay una función para almacenar el usuario, ejecutarla
+        # If there is a function to store the user, execute it
         if store_user_func and callable(store_user_func):
             store_user_func(user_info, token_data)
         
-        # Redirigir a la URL de éxito o a la URL guardada anteriormente
+        # Redirect to the success URL or the previously saved URL
         next_url = session.pop('next_url', self.success_redirect)
         return next_url

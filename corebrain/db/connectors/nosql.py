@@ -20,7 +20,7 @@ except ImportError:
     # Whe nadding new DB type write a try to it from user
 
 try:
-    import corebrain.db.connectors.subconnectors.nosql.mongodb as mongodb_subconnector
+    import corebrain.db.connectors.NoSQL.mongodb as mongodb_subconnector
     MONGO_MODULES = True
 except ImportError:
     MONGO_MODULES = False
