@@ -42,7 +42,7 @@ def export_config(filepath="config.json"):
         json.dump(config, f, indent=4)
     print(f"Configuration exported to {filepath}")
     
-# Función para imprimir mensajes coloreados
+# Function to print colored messages
 def _print_colored(message: str, color: str) -> None:
     """Simplified version of _print_colored that does not depend on cli.utils."""
     colors = {
@@ -114,11 +114,11 @@ class ConfigManager:
                 return {}
             
             try:
-                # Intentar descifrar los datos
+                # Trying to decipher the data
                 decrypted_data = self.cipher.decrypt(encrypted_data.encode()).decode()
                 configs = json.loads(decrypted_data)
             except Exception as e:
-                # Si falla el descifrado, intentar cargar como JSON plano
+                # If decryption fails, attempt to load as plain JSON
                 logger.warning(f"Error decrypting configuration: {e}")
                 configs = json.loads(encrypted_data)
             
