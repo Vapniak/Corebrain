@@ -687,7 +687,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 Note: This command provides a safe environment for configuration
                 management with confirmation prompts for destructive operations.
                 """
-                ConfigManager.list_configs(api_key, api_url)
+                ConfigManager.list_configs(api_key_selected,api_url)
 
             elif args.show_schema:
                 """
