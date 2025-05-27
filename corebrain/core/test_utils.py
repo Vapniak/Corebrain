@@ -46,7 +46,7 @@ def generate_test_question_from_schema(schema: Dict[str, Any]) -> str:
         columns = table["fields"]
     
     if columns:
-        # If we have column/field information
+        # If we have information from columns/fields
         column_name = columns[0]["name"] if columns else "id"
         
         # Add specific questions with columns
@@ -100,13 +100,13 @@ def test_natural_language_query(api_token: str, db_config: Dict[str, Any], api_u
             "config_id": db_config["config_id"]
         }
         
-        # Make the API request
+        # Make the request to the API
         headers = {
             "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json"
         }
         
-        timeout = 15.0  # Reduced maximum wait time
+        timeout = 15.0  # Reduced maximum waiting time
         
         try:
             print_colored("Sending query to API...", "blue")
@@ -117,11 +117,11 @@ def test_natural_language_query(api_token: str, db_config: Dict[str, Any], api_u
                 timeout=timeout
             )
             
-            # Verify the response
+            # Check the answer
             if response.status_code == 200:
                 result = response.json()
                 
-                # Check if there's an explanation in the result
+                # Check if there is an explanation in the result
                 if "explanation" in result:
                     print_colored("\nResponse:", "green")
                     print(result["explanation"])
@@ -129,8 +129,8 @@ def test_natural_language_query(api_token: str, db_config: Dict[str, Any], api_u
                     print_colored("\n✅ Query test successful!", "green")
                     return True
                 else:
-                    # If there's no explanation but the API responds, it may be a different format
-                    print_colored("\nResponse received from API (different format than expected):", "yellow")
+                    # If there is no explanation but the API responds, it may be a different format
+                    print_colored("\nRespuesta recibida del API (formato diferente al esperado):", "yellow")
                     print(json.dumps(result, indent=2))
                     print_colored("\n⚠️ The API responded, but with a different format than expected.", "yellow")
                     return True

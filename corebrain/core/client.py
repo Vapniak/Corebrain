@@ -684,27 +684,27 @@ class Corebrain:
             Dictionary with the query results and explanation
         """
         try:
-            # Verificar opciones de comportamiento
+            # Check behavior options
             execute_query = kwargs.get("execute_query", True)
             explain_results = kwargs.get("explain_results", True)
             
-            # Obtener esquema con el nivel de detalle apropiado
+            # Obtain an outline with the appropriate level of detail
             detail_level = kwargs.get("detail_level", "full")
             schema = self._extract_db_schema(detail_level=detail_level)
             
-            # Validar que el esquema tiene tablas/colecciones
+            # Validate that the schema has tables/collections
             if not schema.get("tables"):
                 print("Error: No tables/collections found in the database")
                 return {"error": True, "explanation": "No tables/collections found in the database"}
             
-            # Obtener nombres de tablas disponibles para validación
+            # Get table names available for validation
             available_tables = set()
             if isinstance(schema.get("tables"), dict):
                 available_tables.update(schema["tables"].keys())
             elif isinstance(schema.get("tables_list"), list):
                 available_tables.update(table["name"] for table in schema["tables_list"])
             
-            # Preparar datos de la solicitud con información de esquema mejorada
+            # Prepare application data with enhanced schema information
             request_data = {
                 "question": question,
                 "db_schema": schema,
@@ -718,30 +718,30 @@ class Corebrain:
                 }
             }
             
-            # Añadir configuración de la base de datos al request
-            # Esto permite a la API ejecutar directamente las consultas si es necesario
+            # Add database configuration to the request
+            # This allows the API to directly execute queries if needed.
             if execute_query:
                 request_data["db_config"] = self.db_config
             
-            # Añadir datos de usuario si están disponibles
+            # Add user data if available
             if self.user_data:
                 request_data["user_data"] = self.user_data
             
-            # Preparar headers para la solicitud
+            # Prepare headers for the request
             headers = {
                 "X-API-Key": self.api_key,
                 "Content-Type": "application/json"
             }
             
-            # Determinar el endpoint adecuado según el modo de ejecución
+            # Determine the appropriate endpoint based on the execution mode
             if execute_query:
-                # Usar el endpoint de ejecución completa
+                # Use the full execution endpoint
                 endpoint = f"{self.api_url}/api/database/sdk/query"
             else:
-                # Usar el endpoint de solo generación de consulta
+                # Use the query-only generation endpoint
                 endpoint = f"{self.api_url}/api/database/generate"
             
-            # Realizar solicitud a la API
+            # Make a request to the API
             response = httpx.post(
                 endpoint,
                 headers=headers,
@@ -749,7 +749,7 @@ class Corebrain:
                 timeout=60.0
             )
             
-            # Verificar respuesta
+            # Check answer
             if response.status_code != 200:
                 error_msg = f"Error {response.status_code} while performing query"
                 try:
@@ -760,29 +760,29 @@ class Corebrain:
                     error_msg += f": {response.text}"
                 return {"error": True, "explanation": error_msg}
             
-            # Procesar respuesta de la API
+            # Process API response
             api_response = response.json()
             
-            # Verificar si la API reportó un error
+            # Check if the API reported an error
             if api_response.get("error", False):
                 return api_response
             
-            # Verificar si se generó una consulta válida
+            # Check if a valid query was generated
             if "query" not in api_response:
                 return {
                     "error": True,
                     "explanation": "The API did not generate a valid query."
                 }
             
-            # Si se debe ejecutar la consulta pero la API no lo hizo
-            # (esto ocurriría solo en caso de cambios de configuración o fallbacks)
+            # If the query should be executed but the API did not
+            # (this would only occur in the case of configuration changes or fallbacks)
             if execute_query and "result" not in api_response:
                 try:
-                    # Preparar la consulta para ejecución local
+                    # Prepare the query for local execution
                     query_type = self.db_config.get("engine", "").lower() if self.db_config["type"].lower() == "sql" else self.db_config["type"].lower()
                     query_value = api_response["query"]
                     
-                    # Para SQL, asegurarse de que la consulta es un string
+                    # For SQL, make sure the query is a string
                     if query_type in ["sqlite", "mysql", "postgresql"]:
                         if isinstance(query_value, dict):
                             sql_candidate = query_value.get("sql") or query_value.get("query")
@@ -791,15 +791,15 @@ class Corebrain:
                             else:
                                 raise CorebrainError(f"The generated SQL query is not a string: {query_value}")
                     
-                    # Preparar la consulta con el formato adecuado
+                    # Prepare the consultation with the appropriate format
                     query_to_execute = {
                         "type": query_type,
                         "query": query_value
                     }
                     
-                    # Para MongoDB, añadir información específica
+                    # For MongoDB, add specific information
                     if query_type in ["nosql", "mongodb"]:
-                        # Obtener nombre de colección
+                        # Get collection name
                         collection_name = None
                         if isinstance(api_response["query"], dict):
                             collection_name = api_response["query"].get("collection")
@@ -810,29 +810,29 @@ class Corebrain:
                         if not collection_name and available_tables:
                             collection_name = list(available_tables)[0]
                         
-                        # Validar nombre de colección
+                        # Validate collection name
                         if not collection_name:
                             raise CorebrainError("No collection specified and no collections found in schema")
                         if not isinstance(collection_name, str) or not collection_name.strip():
                             raise CorebrainError("Invalid collection name: must be a non-empty string")
                         
-                        # Añadir colección a la consulta
+                        # Add collection to query
                         query_to_execute["collection"] = collection_name
                         
-                        # Añadir tipo de operación
+                        # Add operation type
                         if isinstance(api_response["query"], dict):
                             query_to_execute["operation"] = api_response["query"].get("operation", "find")
                         
-                        # Añadir límite si se especifica
+                        # Add limit if specified
                         if "limit" in kwargs:
                             query_to_execute["limit"] = kwargs["limit"]
                     
-                    # Ejecutar la consulta
+                    # Run the query
                     start_time = datetime.now()
                     query_result = self._execute_query(query_to_execute)
                     query_time_ms = int((datetime.now() - start_time).total_seconds() * 1000)
                     
-                    # Actualizar la respuesta con los resultados
+                    # Update the response with the results
                     api_response["result"] = {
                         "data": query_result,
                         "count": len(query_result) if isinstance(query_result, list) else 1,
@@ -840,13 +840,13 @@ class Corebrain:
                         "has_more": False
                     }
                     
-                    # Si se debe generar explicación pero la API no lo hizo
+                    # If explanation should be generated but API didn't do it
                     if explain_results and (
                         "explanation" not in api_response or 
                         not isinstance(api_response.get("explanation"), str) or 
-                        len(str(api_response.get("explanation", ""))) < 15  # Detectar explicaciones numéricas o muy cortas
+                        len(str(api_response.get("explanation", ""))) < 15  # Detect numerical or very short explanations
                     ):
-                        # Preparar datos para obtener explicación
+                        # Prepare data for explanation
                         explanation_data = {
                             "question": question,
                             "query": api_response["query"],
@@ -861,7 +861,7 @@ class Corebrain:
                         }
                         
                         try:
-                            # Obtener explicación de la API
+                            # Get API explanation
                             explanation_response = httpx.post(
                                 f"{self.api_url}/api/database/sdk/query/explain",
                                 headers=headers,
@@ -890,9 +890,9 @@ class Corebrain:
                         }
                     }
             
-            # Verificar si la explicación es un número (probablemente el tiempo de ejecución) y corregirlo
+            # Check if the explanation is a number (probably the runtime) and correct it
             if "explanation" in api_response and not isinstance(api_response["explanation"], str):
-                # Si la explicación es un número, reemplazarla con una explicación generada
+                # If the explanation is a number, replace it with a generated explanation
                 try:
                     is_sql = False
                     if "query" in api_response:
@@ -908,7 +908,7 @@ class Corebrain:
                             sql_query = api_response["query"].get("sql", "")
                             api_response["explanation"] = self._generate_sql_explanation(sql_query, result_data)
                         else:
-                            # Para MongoDB o genérico
+                            # For MongoDB or generic
                             api_response["explanation"] = self._generate_generic_explanation(api_response["query"], result_data)
                     else:
                         api_response["explanation"] = "The query executed successfully."
@@ -916,7 +916,7 @@ class Corebrain:
                     logger.error(f"Error correcting explanation: {str(exp_fix_error)}")
                     api_response["explanation"] = "The query executed successfully."
             
-            # Preparar la respuesta final
+            # Prepare the final response
             result = {
                 "question": question,
                 "query": api_response["query"],
@@ -926,7 +926,7 @@ class Corebrain:
                 }
             }
             
-            # Añadir resultados si están disponibles
+            # Add results if available
             if "result" in api_response:
                 if isinstance(api_response["result"], dict) and "data" in api_response["result"]:
                     result["result"] = api_response["result"]
@@ -938,7 +938,7 @@ class Corebrain:
                         "has_more": False
                     }
             
-            # Añadir explicación si está disponible
+            # Add explanation if available
             if "explanation" in api_response:
                 result["explanation"] = api_response["explanation"]
             
@@ -967,7 +967,7 @@ class Corebrain:
         Returns:
             Generated explanation
         """
-        # Determinar si es SQL o MongoDB
+        # Determine if it is SQL or MongoDB
         if isinstance(query, dict):
             query_type = query.get("type", "").lower()
             
@@ -976,7 +976,7 @@ class Corebrain:
             elif query_type in ["nosql", "mongodb"]:
                 return self._generate_mongodb_explanation(query, results)
         
-        # Fallback genérico
+        # Generic Fallback
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
         return f"The query returned {result_count} results."
 
@@ -994,7 +994,7 @@ class Corebrain:
         sql_lower = sql_query.lower() if isinstance(sql_query, str) else ""
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
         
-        # Extraer nombres de tablas si es posible
+        # Extract table names if possible
         tables = []
         from_match = re.search(r'from\s+([a-zA-Z0-9_]+)', sql_lower)
         if from_match:
@@ -1004,7 +1004,7 @@ class Corebrain:
         if join_matches:
             tables.extend(join_matches)
         
-        # Detectar tipo de consulta
+        # Detect query type
         if "select" in sql_lower:
             if "join" in sql_lower:
                 if len(tables) > 1:
@@ -1021,7 +1021,7 @@ class Corebrain:
             else:
                 return f"The query returned {result_count} records from the database."
         
-        # Para otros tipos de consultas (INSERT, UPDATE, DELETE)
+        # For other types of queries (INSERT, UPDATE, DELETE)
         if "insert" in sql_lower:
             return "Data inserted successfully into the database."
         elif "update" in sql_lower:
@@ -1048,7 +1048,7 @@ class Corebrain:
         operation = query.get("operation", "find")
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
         
-        # Generar explicación según la operación
+        # Generate explanation according to the operation
         if operation == "find":
             return f"Found {result_count} documents in the {collection} that meet the search criteria."
         elif operation == "findOne":
