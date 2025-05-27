@@ -37,7 +37,8 @@ pip install corebrain
 
 ```bash
 
-git clone https://github.com/ceoweggo/Corebrain.git
+git clone https://github.com/ceoweggo/Corebrain.git 
+git submodule update --init --recursive
 pip install -e .
 
 ```
