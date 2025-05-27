@@ -473,61 +473,61 @@ class Corebrain:
         Returns:
             Dictionary with the database structure organized by tables/collections
         """
-        logger.info(f"Extrayendo esquema de base de datos. Tipo: {self.db_config['type']}, Motor: {self.db_config.get('engine')}")
+        logger.info(f"Extracting database schema. Type: {self.db_config['type']}, Engine: {self.db_config.get('engine')}")
         
         db_type = self.db_config["type"].lower()
         schema = {
             "type": db_type,
             "database": self.db_config.get("database", ""),
             "tables": {},
-            "total_collections": 0,  # Añadir contador total
-            "included_collections": 0  # Contador de incluidas
+            "total_collections": 0,  # Add total counter
+            "included_collections": 0  # Counter for included ones
         }
         excluded_tables = set(self.db_config.get("excluded_tables", []))
-        logger.info(f"Tablas excluidas: {excluded_tables}")
+        logger.info(f"Excluded tables: {excluded_tables}")
         
         try:
             if db_type == "sql":
                 engine = self.db_config.get("engine", "").lower()
-                logger.info(f"Procesando base de datos SQL con motor: {engine}")
+                logger.info(f"Processing SQL database with engine: {engine}")
                 
                 if engine in ["sqlite", "mysql", "postgresql"]:
                     cursor = self.db_connection.cursor()
                     
                     if engine == "sqlite":
-                        logger.info("Obteniendo tablas de SQLite")
-                        # Obtener listado de tablas
+                        logger.info("Getting SQLite tables")
+                        # Get table listing
                         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
                         tables = cursor.fetchall()
-                        logger.info(f"Tablas encontradas en SQLite: {tables}")
+                        logger.info(f"Tables found in SQLite: {tables}")
                         
                     elif engine == "mysql":
-                        logger.info("Obteniendo tablas de MySQL")
+                        logger.info("Getting MySQL tables")
                         cursor.execute("SHOW TABLES;")
                         tables = cursor.fetchall()
-                        logger.info(f"Tablas encontradas en MySQL: {tables}")
+                        logger.info(f"Tables found in MySQL: {tables}")
                         
                     elif engine == "postgresql":
-                        logger.info("Obteniendo tablas de PostgreSQL")
+                        logger.info("Getting PostgreSQL tables")
                         cursor.execute("""
                             SELECT table_name FROM information_schema.tables 
                             WHERE table_schema = 'public';
                         """)
                         tables = cursor.fetchall()
-                        logger.info(f"Tablas encontradas en PostgreSQL: {tables}")
+                        logger.info(f"Tables found in PostgreSQL: {tables}")
                     
-                    # Procesar las tablas encontradas
+                    # Process the found tables
                     for table in tables:
                         table_name = table[0]
-                        logger.info(f"Procesando tabla: {table_name}")
+                        logger.info(f"Processing table: {table_name}")
                         
-                        # Saltar tablas excluidas
+                        # Skip excluded tables
                         if table_name in excluded_tables:
-                            logger.info(f"Saltando tabla excluida: {table_name}")
+                            logger.info(f"Skipping excluded table: {table_name}")
                             continue
                         
                         try:
-                            # Obtener información de columnas según el motor
+                            # Get column information according to engine
                             if engine == "sqlite":
                                 cursor.execute(f"PRAGMA table_info({table_name});")
                             elif engine == "mysql":
@@ -540,9 +540,9 @@ class Corebrain:
                                 """)
                             
                             columns = cursor.fetchall()
-                            logger.info(f"Columnas encontradas para {table_name}: {columns}")
+                            logger.info(f"Columns found for {table_name}: {columns}")
                             
-                            # Estructura de columnas según el motor
+                            # Column structure according to engine
                             if engine == "sqlite":
                                 column_info = [{"name": col[1], "type": col[2]} for col in columns]
                             elif engine == "mysql":
@@ -550,25 +550,25 @@ class Corebrain:
                             elif engine == "postgresql":
                                 column_info = [{"name": col[0], "type": col[1]} for col in columns]
                             
-                            # Guardar información de la tabla
+                            # Save table information
                             schema["tables"][table_name] = {
                                 "columns": column_info,
-                                "sample_data": []  # No obtenemos datos de muestra por defecto
+                                "sample_data": []  # We don't get sample data by default
                             }
                             
                         except Exception as e:
-                            logger.error(f"Error procesando tabla {table_name}: {str(e)}")
+                            logger.error(f"Error processing table {table_name}: {str(e)}")
                     
                 else:
-                    # Usando SQLAlchemy
-                    logger.info("Usando SQLAlchemy para obtener el esquema")
+                    # Using SQLAlchemy
+                    logger.info("Using SQLAlchemy to get schema")
                     inspector = inspect(self.db_connection)
                     table_names = inspector.get_table_names()
-                    logger.info(f"Tablas encontradas con SQLAlchemy: {table_names}")
+                    logger.info(f"Tables found with SQLAlchemy: {table_names}")
                     
                     for table_name in table_names:
                         if table_name in excluded_tables:
-                            logger.info(f"Saltando tabla excluida: {table_name}")
+                            logger.info(f"Skipping excluded table: {table_name}")
                             continue
                             
                         try:
@@ -580,12 +580,12 @@ class Corebrain:
                                 "sample_data": []
                             }
                         except Exception as e:
-                            logger.error(f"Error procesando tabla {table_name} con SQLAlchemy: {str(e)}")
+                            logger.error(f"Error processing table {table_name} with SQLAlchemy: {str(e)}")
             
             elif db_type in ["nosql", "mongodb"]:
-                logger.info("Procesando base de datos MongoDB")
+                logger.info("Processing MongoDB database")
                 if not hasattr(self, 'db_connection') or self.db_connection is None:
-                    logger.error("La conexión a MongoDB no está disponible")
+                    logger.error("MongoDB connection is not available")
                     return schema
                 
                 try:
@@ -593,25 +593,25 @@ class Corebrain:
                     try:
                         collection_names = self.db_connection.list_collection_names()
                         schema["total_collections"] = len(collection_names)
-                        logger.info(f"Colecciones encontradas en MongoDB: {collection_names}")
+                        logger.info(f"Collections found in MongoDB: {collection_names}")
                     except Exception as e:
-                        logger.error(f"Error al obtener colecciones MongoDB: {str(e)}")
+                        logger.error(f"Error getting MongoDB collections: {str(e)}")
                         return schema
                     
-                    # Si solo queremos los nombres
+                    # If we only want the names
                     if detail_level == "names_only":
                         schema["collection_names"] = collection_names
                         return schema
                     
-                    # Procesar cada colección
+                    # Process each collection
                     for collection_name in collection_names:
                         if collection_name in excluded_tables:
-                            logger.info(f"Saltando colección excluida: {collection_name}")
+                            logger.info(f"Skipping excluded collection: {collection_name}")
                             continue
                             
                         try:
                             collection = self.db_connection[collection_name]
-                            # Obtener un documento para inferir estructura
+                            # Get a document to infer structure
                             first_doc = collection.find_one()
                             
                             if first_doc:
@@ -625,20 +625,20 @@ class Corebrain:
                                     "fields": fields,
                                     "doc_count": collection.estimated_document_count()
                                 }
-                                logger.info(f"Procesada colección {collection_name} con {len(fields)} campos")
+                                logger.info(f"Processed collection {collection_name} with {len(fields)} fields")
                             else:
-                                logger.info(f"Colección {collection_name} está vacía")
+                                logger.info(f"Collection {collection_name} is empty")
                                 schema["tables"][collection_name] = {
                                     "fields": [],
                                     "doc_count": 0
                                 }
                         except Exception as e:
-                            logger.error(f"Error procesando colección {collection_name}: {str(e)}")
+                            logger.error(f"Error processing collection {collection_name}: {str(e)}")
                 
                 except Exception as e:
-                    logger.error(f"Error general procesando MongoDB: {str(e)}")
+                    logger.error(f"General error processing MongoDB: {str(e)}")
             
-            # Convertir el diccionario de tablas en una lista
+            # Convert the table dictionary to a list
             table_list = []
             for table_name, table_info in schema["tables"].items():
                 table_data = {"name": table_name}
@@ -646,13 +646,13 @@ class Corebrain:
                 table_list.append(table_data)
             
             schema["tables_list"] = table_list
-            logger.info(f"Esquema final - Tablas encontradas: {len(schema['tables'])}")
-            logger.info(f"Nombres de tablas: {list(schema['tables'].keys())}")
+            logger.info(f"Final schema - Tables found: {len(schema['tables'])}")
+            logger.info(f"Table names: {list(schema['tables'].keys())}")
             
             return schema
             
         except Exception as e:
-            logger.error(f"Error al extraer el esquema de la base de datos: {str(e)}")
+            logger.error(f"Error extracting database schema: {str(e)}")
             return {"type": db_type, "tables": {}, "tables_list": []}
 
     def list_collections_name(self) -> List[str]:
@@ -694,8 +694,8 @@ class Corebrain:
             
             # Validar que el esquema tiene tablas/colecciones
             if not schema.get("tables"):
-                print("Error: No se encontraron tablas/colecciones en la base de datos")
-                return {"error": True, "explanation": "No se encontraron tablas/colecciones en la base de datos"}
+                print("Error: No tables/collections found in the database")
+                return {"error": True, "explanation": "No tables/collections found in the database"}
             
             # Obtener nombres de tablas disponibles para validación
             available_tables = set()
@@ -751,7 +751,7 @@ class Corebrain:
             
             # Verificar respuesta
             if response.status_code != 200:
-                error_msg = f"Error {response.status_code} al realizar la consulta"
+                error_msg = f"Error {response.status_code} while performing query"
                 try:
                     error_data = response.json()
                     if isinstance(error_data, dict):
@@ -771,7 +771,7 @@ class Corebrain:
             if "query" not in api_response:
                 return {
                     "error": True,
-                    "explanation": "La API no generó una consulta válida."
+                    "explanation": "The API did not generate a valid query."
                 }
             
             # Si se debe ejecutar la consulta pero la API no lo hizo
@@ -789,7 +789,7 @@ class Corebrain:
                             if isinstance(sql_candidate, str):
                                 query_value = sql_candidate
                             else:
-                                raise CorebrainError(f"La consulta SQL generada no es un string: {query_value}")
+                                raise CorebrainError(f"The generated SQL query is not a string: {query_value}")
                     
                     # Preparar la consulta con el formato adecuado
                     query_to_execute = {
@@ -812,9 +812,9 @@ class Corebrain:
                         
                         # Validar nombre de colección
                         if not collection_name:
-                            raise CorebrainError("No se especificó colección y no se encontraron colecciones en el esquema")
+                            raise CorebrainError("No collection specified and no collections found in schema")
                         if not isinstance(collection_name, str) or not collection_name.strip():
-                            raise CorebrainError("Nombre de colección inválido: debe ser un string no vacío")
+                            raise CorebrainError("Invalid collection name: must be a non-empty string")
                         
                         # Añadir colección a la consulta
                         query_to_execute["collection"] = collection_name
@@ -871,15 +871,15 @@ class Corebrain:
                             
                             if explanation_response.status_code == 200:
                                 explanation_result = explanation_response.json()
-                                api_response["explanation"] = explanation_result.get("explanation", "No se pudo generar una explicación.")
+                                api_response["explanation"] = explanation_result.get("explanation", "Could not generate an explanation.")
                             else:
                                 api_response["explanation"] = self._generate_fallback_explanation(query_to_execute, query_result)
                         except Exception as explain_error:
-                            logger.error(f"Error al obtener explicación: {str(explain_error)}")
+                            logger.error(f"Error getting explanation: {str(explain_error)}")
                             api_response["explanation"] = self._generate_fallback_explanation(query_to_execute, query_result)
                 
                 except Exception as e:
-                    error_msg = f"Error al ejecutar la consulta: {str(e)}"
+                    error_msg = f"Error executing query: {str(e)}"
                     logger.error(error_msg)
                     return {
                         "error": True,
@@ -911,10 +911,10 @@ class Corebrain:
                             # Para MongoDB o genérico
                             api_response["explanation"] = self._generate_generic_explanation(api_response["query"], result_data)
                     else:
-                        api_response["explanation"] = "La consulta se ha ejecutado correctamente."
+                        api_response["explanation"] = "The query executed successfully."
                 except Exception as exp_fix_error:
-                    logger.error(f"Error al corregir explicación: {str(exp_fix_error)}")
-                    api_response["explanation"] = "La consulta se ha ejecutado correctamente."
+                    logger.error(f"Error correcting explanation: {str(exp_fix_error)}")
+                    api_response["explanation"] = "The query executed successfully."
             
             # Preparar la respuesta final
             result = {
@@ -945,16 +945,16 @@ class Corebrain:
             return result
             
         except httpx.TimeoutException:
-            return {"error": True, "explanation": "Tiempo de espera agotado al conectar con el servidor."}
+            return {"error": True, "explanation": "Timeout waiting to connect to server."}
             
         except httpx.RequestError as e:
-            return {"error": True, "explanation": f"Error de conexión con el servidor: {str(e)}"}
+            return {"error": True, "explanation": f"Connection error with server: {str(e)}"}
             
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
-            logger.error(f"Error inesperado en ask(): {error_details}")
-            return {"error": True, "explanation": f"Error inesperado: {str(e)}"}
+            logger.error(f"Unexpected error in ask(): {error_details}")
+            return {"error": True, "explanation": f"Unexpected error: {str(e)}"}
     
     def _generate_fallback_explanation(self, query, results):
         """
@@ -978,7 +978,7 @@ class Corebrain:
         
         # Fallback genérico
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
-        return f"La consulta devolvió {result_count} resultados."
+        return f"The query returned {result_count} results."
 
     def _generate_sql_explanation(self, sql_query, results):
         """
@@ -1009,28 +1009,28 @@ class Corebrain:
             if "join" in sql_lower:
                 if len(tables) > 1:
                     if "where" in sql_lower:
-                        return f"Se encontraron {result_count} registros que cumplen con los criterios especificados, relacionando información de las tablas {', '.join(tables)}."
+                        return f"Found {result_count} records that meet the specified criteria, relating information from tables {', '.join(tables)}."
                     else:
-                        return f"Se obtuvieron {result_count} registros relacionando información de las tablas {', '.join(tables)}."
+                        return f"Found {result_count} records relating information from tables {', '.join(tables)}."
                 else:
-                    return f"Se obtuvieron {result_count} registros relacionando datos entre tablas."
+                    return f"Found {result_count} records relating data between tables."
                     
             elif "where" in sql_lower:
-                return f"Se encontraron {result_count} registros que cumplen con los criterios de búsqueda."
+                return f"Found {result_count} records that meet the search criteria."
                 
             else:
-                return f"La consulta devolvió {result_count} registros de la base de datos."
+                return f"The query returned {result_count} records from the database."
         
         # Para otros tipos de consultas (INSERT, UPDATE, DELETE)
         if "insert" in sql_lower:
-            return "Se insertaron correctamente los datos en la base de datos."
+            return "Data inserted successfully into the database."
         elif "update" in sql_lower:
-            return "Se actualizaron correctamente los datos en la base de datos."
+            return "Data updated successfully in the database."
         elif "delete" in sql_lower:
-            return "Se eliminaron correctamente los datos de la base de datos."
+            return "Data deleted successfully from the database."
         
         # Fallback genérico
-        return f"La consulta SQL se ejecutó correctamente y devolvió {result_count} resultados."
+        return f"The SQL query executed successfully and returned {result_count} results."
 
 
     def _generate_mongodb_explanation(self, query, results):
@@ -1044,29 +1044,29 @@ class Corebrain:
         Returns:
             Generated explanation
         """
-        collection = query.get("collection", "la colección")
+        collection = query.get("collection", "the collection")
         operation = query.get("operation", "find")
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
         
         # Generar explicación según la operación
         if operation == "find":
-            return f"Se encontraron {result_count} documentos en la colección {collection} que coinciden con los criterios de búsqueda."
+            return f"Found {result_count} documents in the {collection} that meet the search criteria."
         elif operation == "findOne":
             if result_count > 0:
-                return f"Se encontró el documento solicitado en la colección {collection}."
+                return f"Found the requested document in the {collection}."
             else:
-                return f"No se encontró ningún documento en la colección {collection} que coincida con los criterios."
+                return f"No documents found in the {collection} that meet the criteria."
         elif operation == "aggregate":
-            return f"La agregación en la colección {collection} devolvió {result_count} resultados."
+            return f"The aggregation in the {collection} returned {result_count} results."
         elif operation == "insertOne":
-            return f"Se ha insertado correctamente un nuevo documento en la colección {collection}."
+            return f"A new document inserted successfully into the {collection}."
         elif operation == "updateOne":
-            return f"Se ha actualizado correctamente un documento en la colección {collection}."
+            return f"A document updated successfully in the {collection}."
         elif operation == "deleteOne":
-            return f"Se ha eliminado correctamente un documento de la colección {collection}."
+            return f"A document deleted successfully from the {collection}."
         
         # Fallback genérico
-        return f"La operación {operation} se ejecutó correctamente en la colección {collection} y devolvió {result_count} resultados."
+        return f"The {operation} operation executed successfully in the {collection} and returned {result_count} results."
 
 
     def _generate_generic_explanation(self, query, results):
@@ -1083,11 +1083,11 @@ class Corebrain:
         result_count = len(results) if isinstance(results, list) else (1 if results else 0)
         
         if result_count == 0:
-            return "La consulta no devolvió ningún resultado."
+            return "The query returned no results."
         elif result_count == 1:
-            return "La consulta devolvió 1 resultado."
+            return "The query returned 1 result."
         else:
-            return f"La consulta devolvió {result_count} resultados."
+            return f"The query returned {result_count} results."
     
     
     def close(self) -> None:
