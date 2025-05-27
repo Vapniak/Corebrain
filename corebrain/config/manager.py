@@ -250,8 +250,7 @@ class ConfigManager:
         Returns:
             ID of the selected or activated configuration (or None if nothing selected).
         """
-        configs = self.configs
-        if configs:
+        if not self.configs:
             print("No saved configurations found.")
             return None
 
