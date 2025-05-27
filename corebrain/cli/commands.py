@@ -16,8 +16,7 @@ from corebrain.cli.auth.sso import authenticate_with_sso, authenticate_with_sso_
 from corebrain.cli.config import configure_sdk, get_api_credential
 from corebrain.cli.utils import print_colored
 from corebrain.config.manager import ConfigManager
-from corebrain.config.manager import export_config
-from corebrain.lib.sso.auth import GlobodainSSOAuth
+from corebrain.lib.sso.auth import GlobodainSSOAuth 
 
 def main_cli(argv: Optional[List[str]] = None) -> int:
     """
@@ -63,7 +62,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             sso_url = os.environ.get("COREBRAIN_SSO_URL") or DEFAULT_SSO_URL
             api_key_selected, user_data, api_token = authenticate_with_sso_and_api_key_request(sso_url)
 
-            if sso_token:
+            if api_token:
                 try:
                     print_colored("✅ User authenticated and SDK is now connected to API.", "green")
                     print_colored("✅ Returning User data.", "green")
@@ -688,7 +687,8 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 Note: This command provides a safe environment for configuration
                 management with confirmation prompts for destructive operations.
                 """
-                ConfigManager.list_configs(api_key, api_url)
+                manager = ConfigManager()
+                manager.list_configs(api_key_selected)
 
             elif args.show_schema:
                 """

@@ -36,8 +36,6 @@ def extract_db_schema(db_config: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         if db_type == "sql":
-            # Code for SQL databases...
-            # [Kept the same]
             pass
         
         # Handle both "nosql" and "mongodb" as valid types
@@ -214,8 +212,11 @@ def test_connection(db_config: Dict[str, Any]) -> bool:
         if db_config["type"].lower() == "sql":
             # Code to test SQL connection...
             pass
-        elif db_config["type"].lower() in ["nosql", "mongodb"]:
-            import pymongo
+        elif db_config["type"].lower() == "nosql":
+            if db_config["engine"].lower() == "mongodb":
+                import pymongo
+            else:
+                raise ValueError(f"Unsupported NoSQL engine: {db_config['engine']}")
             
             # Create MongoDB client
             client = pymongo.MongoClient(db_config["connection_string"])

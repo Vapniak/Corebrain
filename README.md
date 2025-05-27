@@ -36,18 +36,21 @@ pip install corebrain
 ### From source code
 
 ```bash
-git clone https://github.com/ceoweggo/Corebrain.git
+
+git clone https://github.com/ceoweggo/Corebrain.git 
+git submodule update --init --recursive
 pip install -e .
+
 ```
 
 ## 🚀 Quick Start Guide
 
 ### Initialization
 
-# > **⚠️ IMPORTANT:**  
-# > * If you don't have an existing configuration, first run `corebrain --configure`
-# > * If you need to generate a new API key, use `corebrain --create`
-# > * Never share your API key in public repositories. Use environment variables instead.
+> **⚠️ IMPORTANT:**  
+> * If you don't have an existing configuration, first run `corebrain --configure`
+> * If you need to generate a new API key, use `corebrain --create`
+> * Never share your API key in public repositories. Use environment variables instead.
 
 
 ```python
@@ -158,7 +161,12 @@ git clone https://github.com/ceoweggo/Corebrain.git
 cd corebrain
 
 # Install in development mode with extra tools
-pip install -e ".[dev,all_db]"
+
+# On Windows (use powershell)
+.\setup.ps1
+
+# On Linux/macOS (use bash)
+./setup.sh
 ```
 
 ### Verifying Style and Typing

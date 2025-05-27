@@ -289,7 +289,7 @@ class APIClient:
                     retries += 1
                     continue
                 
-                # No más reintentos o error no recuperable
+                # No more retries or unrecoverable errors
                 self.error_count += 1
                 elapsed = time.time() - start_time
                 
