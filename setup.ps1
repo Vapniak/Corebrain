@@ -2,4 +2,4 @@ python -m venv venv
 
 .\venv\Scripts\Activate.ps1
 
-pip install -e ".[dev,all_db]"
+pip install -e ".[dev,all_db,sphinx-copybutton]"

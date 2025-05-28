@@ -293,14 +293,14 @@ def authenticate_with_sso(sso_url: str) -> Tuple[Optional[str], Optional[Dict[st
         
         # Verify if authentication was completed
         if auth_completed.is_set():
-            print_colored("✅ SSO authentication completed successfully!", "green")
+            print_colored("[OK] SSO authentication completed successfully!", "green")
             return result["sso_token"], session_data['user']
         else:
-            print_colored(f"❌ Could not complete SSO authentication in {timeout_seconds} seconds.", "red")
+            print_colored(f"[ERROR] Could not complete SSO authentication in {timeout_seconds} seconds.", "red")
             print_colored("You can try again or use a token manually.", "yellow")
             return None, None, None
     except Exception as e:
-        print_colored(f"❌ Error during SSO authentication: {str(e)}", "red")
+        print_colored(f"[ERROR] Error during SSO authentication: {str(e)}", "red")
         return None, None, None
     finally:
         # Stop the server
@@ -405,7 +405,7 @@ def authenticate_with_sso_and_api_key_request(sso_url: str) -> Tuple[Optional[st
             if 'user' in session_data:
                 user_data = session_data['user']
                 
-                print_colored("✅ SSO authentication completed successfully!", "green")
+                print_colored("[OK] SSO authentication completed successfully!", "green")
                 
                 # Get and select an API key
                 api_url = os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
@@ -416,7 +416,7 @@ def authenticate_with_sso_and_api_key_request(sso_url: str) -> Tuple[Optional[st
                     api_token = exchange_sso_token_for_api_token(api_url, result["sso_token"], user_data)
                     
                     if not api_token:
-                        print_colored("⚠️ Could not obtain an API Token with the SSO Token", "yellow")
+                        print_colored("[WARN] Could not obtain an API Token with the SSO Token", "yellow")
                         return None, None, None
                     
                     # Now that we have the API Token, we get the available API Keys
@@ -426,21 +426,21 @@ def authenticate_with_sso_and_api_key_request(sso_url: str) -> Tuple[Optional[st
                         # We return the selected api_key
                         return api_key_selected, user_data, api_token
                     else:
-                        print_colored("⚠️ Could not obtain an API Key. Create a new one using the command", "yellow")
+                        print_colored("[WARN] Could not obtain an API Key. Create a new one using the command", "yellow")
                         return None, user_data, api_token
                 else:
-                    print_colored("❌ No valid token was obtained during authentication.", "red")
+                    print_colored("[ERROR] No valid token was obtained during authentication.", "red")
                     return None, None, None
             
             # We don't have a token or user data
-            print_colored("❌ Authentication did not produce a valid token.", "red")
+            print_colored("[ERROR] Authentication did not produce a valid token.", "red")
             return None, None, None
         else:
-            print_colored(f"❌ Could not complete SSO authentication in {timeout_seconds} seconds.", "red")
+            print_colored(f"[ERROR] Could not complete SSO authentication in {timeout_seconds} seconds.", "red")
             print_colored("You can try again or use a token manually.", "yellow")
             return None, None, None
     except Exception as e:
-        print_colored(f"❌ Error during SSO authentication: {str(e)}", "red")
+        print_colored(f"[ERROR] Error during SSO authentication: {str(e)}", "red")
         return None, None, None
     finally:
         # Stop the server

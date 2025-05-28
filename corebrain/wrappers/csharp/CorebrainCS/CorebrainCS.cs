@@ -10,7 +10,8 @@ using System.Collections.Generic;
 ///<param name="pythonPath">Path to the python which works with the corebrain cli, for example if you create the ./.venv you pass the path to the ./.venv python executable</param>
 /// <param name="scriptPath">Path to the corebrain cli script, if you installed it globally you just pass the `corebrain` path</param>
 /// <param name="verbose"></param>
-public class CorebrainCS(string pythonPath = "python", string scriptPath = "corebrain", bool verbose = false) {
+public class CorebrainCS(string pythonPath = "python", string scriptPath = "corebrain", bool verbose = false)
+{
   private readonly string _pythonPath = Path.GetFullPath(pythonPath);
   private readonly string _scriptPath = Path.GetFullPath(scriptPath);
   private readonly bool _verbose = verbose;
@@ -19,7 +20,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Shows help message with all available commands
   /// </summary>
   /// <returns></returns>
-  public string Help() {
+  public string Help()
+  {
     return ExecuteCommand("--help");
   }
 
@@ -27,7 +29,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Shows the current version of the Corebrain SDK
   /// </summary>
   /// <returns></returns>
-  public string Version() {
+  public string Version()
+  {
     return ExecuteCommand("--version");
   }
 
@@ -40,7 +43,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// - SSO Server status
   /// - MongoDB status
   /// - Required libraries installation
-  public string CheckStatus() {
+  public string CheckStatus()
+  {
     return ExecuteCommand("--check-status");
   }
   /// <summary>
@@ -50,10 +54,12 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// <param name="token"></param>
   /// <returns></returns>
   /// <exception cref="ArgumentException"></exception>
-  public string CheckStatus(string? apiUrl = null, string? token = null) {
+  public string CheckStatus(string? apiUrl = null, string? token = null)
+  {
     var args = new List<string> { "--check-status" };
 
-    if (!string.IsNullOrEmpty(apiUrl)) {
+    if (!string.IsNullOrEmpty(apiUrl))
+    {
       if (!Uri.IsWellFormedUriString(apiUrl, UriKind.Absolute))
         throw new ArgumentException("Invalid API URL format", nameof(apiUrl));
 
@@ -73,12 +79,15 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// <param name="password"></param>
   /// <returns></returns>
   /// <exception cref="ArgumentException"></exception>
-  public string Authentication(string username, string password) {
-    if (string.IsNullOrWhiteSpace(username)) {
+  public string Authentication(string username, string password)
+  {
+    if (string.IsNullOrWhiteSpace(username))
+    {
       throw new ArgumentException("Username cannot be empty or whitespace", nameof(username));
     }
 
-    if (string.IsNullOrWhiteSpace(password)) {
+    if (string.IsNullOrWhiteSpace(password))
+    {
       throw new ArgumentException("Password cannot be empty or whitespace", nameof(password));
     }
 
@@ -95,8 +104,10 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// <param name="token"></param>
   /// <returns></returns>
   /// <exception cref="ArgumentException"></exception>
-  public string AuthenticationWithToken(string token) {
-    if (string.IsNullOrWhiteSpace(token)) {
+  public string AuthenticationWithToken(string token)
+  {
+    if (string.IsNullOrWhiteSpace(token))
+    {
       throw new ArgumentException("Token cannot be empty or whitespace", nameof(token));
     }
 
@@ -108,7 +119,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Creates a new user account and generates an associated API Key
   /// </summary>
   /// <returns></returns>
-  public string CreateUser() {
+  public string CreateUser()
+  {
     return ExecuteCommand("--create-user");
   }
 
@@ -116,7 +128,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Launches the configuration wizard for setting up database connections
   /// </summary>
   /// <returns></returns>
-  public string Configure() {
+  public string Configure()
+  {
     return ExecuteCommand("--configure");
   }
 
@@ -124,7 +137,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Lists all available database configurations
   /// </summary>
   /// <returns></returns>
-  public string ListConfigs() {
+  public string ListConfigs()
+  {
     return ExecuteCommand("--list-configs");
   }
 
@@ -132,7 +146,8 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Displays the database schema for a configured database
   /// </summary>
   /// <returns></returns>
-  public string ShowSchema() {
+  public string ShowSchema()
+  {
     return ExecuteCommand("--show-schema");
   }
 
@@ -140,24 +155,30 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
   /// Displays information about the currently authenticated user
   /// </summary>
   /// <returns></returns>
-  public string WhoAmI() {
-    return ExecuteCommand("--woami");
+  public string WhoAmI()
+  {
+    return ExecuteCommand("--whoami");
   }
 
   /// <summary>
   /// Launches the web-based graphical user interface
   /// </summary>
   /// <returns></returns>
-  public string Gui() {
+  public string Gui()
+  {
     return ExecuteCommand("--gui");
   }
-  private string ExecuteCommand(string arguments) {
-    if (_verbose) {
+  public string ExecuteCommand(string arguments)
+  {
+    if (_verbose)
+    {
       Console.WriteLine($"Executing: {_pythonPath} {_scriptPath} {arguments}");
     }
 
-    var process = new Process {
-      StartInfo = new ProcessStartInfo {
+    var process = new Process
+    {
+      StartInfo = new ProcessStartInfo
+      {
         FileName = _pythonPath,
         Arguments = $"\"{_scriptPath}\" {arguments}",
         RedirectStandardOutput = true,
@@ -172,18 +193,31 @@ public class CorebrainCS(string pythonPath = "python", string scriptPath = "core
     var error = process.StandardError.ReadToEnd();
     process.WaitForExit();
 
-    if (_verbose) {
+    if (_verbose)
+    {
       Console.WriteLine("Command output:");
       Console.WriteLine(output);
-      if (!string.IsNullOrEmpty(error)) {
+      if (!string.IsNullOrEmpty(error))
+      {
         Console.WriteLine("Error output:\n" + error);
       }
     }
 
-    if (!string.IsNullOrEmpty(error)) {
+    if (!string.IsNullOrEmpty(error))
+    {
       throw new InvalidOperationException($"Python CLI error: {error}");
     }
 
     return output.Trim();
+  }
+  
+  /// <summary>
+  /// Starts an interactive session with the Corebrain CLI
+  /// /// This allows for multi-stage interactions similar to a REPL (Read-Eval-Print Loop).
+  /// </summary>
+  /// <returns>An instance of <see cref="InteractiveSession"/> that can be used to send commands and receive output.</returns>
+  public InteractiveSession StartInteractiveSession()
+  {
+    return new InteractiveSession(_pythonPath, _scriptPath, _verbose);
   }
 }

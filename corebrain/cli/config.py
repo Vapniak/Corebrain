@@ -266,10 +266,10 @@ def test_database_connection(api_token: str, db_config: Dict[str, Any], api_url:
             client.close()
         
         # If we got here, the connection was successful
-        print_colored("✅ Database connection successful!", "green")
+        print_colored("[OK] Database connection successful!", "green")
         return True
     except Exception as e:
-        print_colored(f"❌ Error connecting to the database: {str(e)}", "red")
+        print_colored(f"[ERROR] Error connecting to the database: {str(e)}", "red")
         return False
   
 def select_excluded_tables(api_token: str, db_config: Dict[str, Any], api_url: Optional[str] = None, user_data: Optional[Dict[str, Any]] = None) -> List[str]:
@@ -347,9 +347,9 @@ def save_configuration(sso_token: str, api_key: str, db_config: Dict[str, Any], 
         # 2. Verify that the configuration was saved locally
         saved_config = config_manager.get_config(api_key, config_id)
         if not saved_config:
-            print_colored("⚠️ Could not verify local saving of configuration", "yellow")
+            print_colored("[WARN] Could not verify local saving of configuration", "yellow")
         else:
-            print_colored("✅ Configuration saved locally successfully", "green")
+            print_colored("[OK] Configuration saved locally successfully", "green")
         
         # 3. Try to sync with the server
         try:
@@ -394,19 +394,19 @@ def save_configuration(sso_token: str, api_key: str, db_config: Dict[str, Any], 
                 )
                 
                 if response.status_code in [200, 201, 204]:
-                    print_colored("✅ Configuration successfully synced with server", "green")
+                    print_colored("[OK] Configuration successfully synced with server", "green")
                 else:
-                    print_colored(f"⚠️ Error syncing with server (Code: {response.status_code})", "yellow")
+                    print_colored(f"[WARN] Error syncing with server (Code: {response.status_code})", "yellow")
                     print_colored(f"Response: {response.text[:200]}...", "yellow")
             
         except Exception as e:
-            print_colored(f"⚠️ Error syncing with server: {str(e)}", "yellow")
+            print_colored(f"[WARN] Error syncing with server: {str(e)}", "yellow")
             print_colored("The configuration is still saved locally", "green")
         
         return True
         
     except Exception as e:
-        print_colored(f"❌ Error saving configuration: {str(e)}", "red")
+        print_colored(f"[ERROR] Error saving configuration: {str(e)}", "red")
         return False
 
 def configure_sdk(api_token: str, api_key: str, api_url: Optional[str] = None, sso_url: Optional[str] = None, user_data: Optional[Dict[str, Any]] = None) -> None:
@@ -443,7 +443,7 @@ def configure_sdk(api_token: str, api_key: str, api_url: Optional[str] = None, s
     # PHASE 5: Verify database connection
     print_colored("\n5. Verifying database connection...", "blue")
     if not test_database_connection(api_key, db_config, api_url, user_data):
-        print_colored("❌ Configuration not completed due to connection errors.", "red")
+        print_colored("[ERROR] Configuration not completed due to connection errors.", "red")
         return
     
     # PHASE 6: Define non-accessible tables/collections
@@ -457,7 +457,7 @@ def configure_sdk(api_token: str, api_key: str, api_url: Optional[str] = None, s
     
     # Save the configuration
     if not save_configuration(api_token, api_key, db_config, api_url):
-        print_colored("❌ Error saving configuration.", "red")
+        print_colored("[ERROR] Error saving configuration.", "red")
         return
     
     """ # * --> Deactivated
@@ -466,12 +466,12 @@ def configure_sdk(api_token: str, api_key: str, api_url: Optional[str] = None, s
         print_colored("\n8. Testing natural language query...", "blue")
         test_natural_language_query(api_key, db_config, api_url, user_data)
     except Exception as e:
-        print_colored(f"⚠️ Could not perform the query test: {str(e)}", "yellow")
+        print_colored(f"[WARN] Could not perform the query test: {str(e)}", "yellow")
         print_colored("This does not affect the saved configuration.", "yellow")
     """
     
     # Final message
-    print_colored("\n✅ Configuration completed successfully!", "green")
+    print_colored("\n[OK] Configuration completed successfully!", "green")
     print_colored(f"\nYou can use this SDK in your code with:", "blue")
     print(f"""
         from corebrain import init

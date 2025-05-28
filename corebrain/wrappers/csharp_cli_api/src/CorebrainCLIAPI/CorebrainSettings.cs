@@ -5,20 +5,15 @@ namespace CorebrainCLIAPI;
 /// </summary>
 public class CorebrainSettings
 {
+    public CorebrainSettings() { }
 
-  /// <summary>
-  /// Gets or sets the path to the Python executable (e.g., "./.venv/Scripts/python").
-  /// </summary>
-  public string PythonPath { get; set; }
+    public string PythonPath { get; set; }
+    public string ScriptPath { get; set; }
+    public bool Verbose { get; set; }
 
-  /// <summary>
-  /// Gets or sets the path to the Corebrain CLI script or the command name if installed globally (e.g., "corebrain").
-  /// </summary>
-  public string ScriptPath { get; set; }
-
-  /// <summary>
-  /// Gets or sets a value indicating whether verbose logging is enabled.
-  /// Default is <c>false</c>.
-  /// </summary>
-  public bool Verbose { get; set; } = false;
+    public CorebrainSettings(string pythonPath, string scriptPath)
+    {
+        PythonPath = pythonPath;
+        ScriptPath = scriptPath;
+    }
 }

@@ -1,6 +1,8 @@
 using System.Reflection;
 using CorebrainCLIAPI;
+using CorebrainCLIAPI.Controllers;
 using Microsoft.OpenApi.Models;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +20,10 @@ builder.Services.Configure<CorebrainSettings>(
 
 // Swagger / OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c => {
-  c.SwaggerDoc("v1", new OpenApiInfo {
+builder.Services.AddSwaggerGen(c =>
+{
+  c.SwaggerDoc("v1", new OpenApiInfo
+  {
     Title = "Corebrain CLI API",
     Version = "v1",
     Description = "ASP.NET Core Web API for interfacing with Corebrain CLI commands"
@@ -27,22 +31,46 @@ builder.Services.AddSwaggerGen(c => {
 
   var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
   var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-  if (File.Exists(xmlPath)) {
+  if (File.Exists(xmlPath))
+  {
     c.IncludeXmlComments(xmlPath);
   }
 });
 
+// Middleware to log requests and responses
+builder.Services.AddSingleton<CorebrainCS.CorebrainCS>();
+
 var app = builder.Build();
+
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/interactive"))
+    {
+        var sessionId = context.Request.RouteValues["sessionId"]?.ToString();
+        
+        if (sessionId != null && !InteractiveController.SessionExists(sessionId))
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsync("Session expired or invalid");
+            return;
+        }
+    }
+    await next();
+});
+
 
 // Middleware pipeline
 app.UseCors("AllowFrontend");
 
-if (app.Environment.IsDevelopment()) {
+if (app.Environment.IsDevelopment())
+{
   app.UseSwagger();
   app.UseSwaggerUI(c =>
       c.SwaggerEndpoint("/swagger/v1/swagger.json", "Corebrain CLI API v1"));
 }
 
+// Configure the HTTP request pipeline
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
