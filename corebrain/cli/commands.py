@@ -44,18 +44,18 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             sso_token, sso_user = authenticate_with_sso(sso_url)
             if sso_token:
                 try:
-                    print_colored("✅ Returning SSO Token.", "green")
+                    print_colored("[OK] Returning SSO Token.", "green")
                     print_colored(f"{sso_token}", "blue")
-                    print_colored("✅ Returning User data.", "green")
+                    print_colored("[OK] Returning User data.", "green")
                     print_colored(f"{sso_user}", "blue")
                     return sso_token, sso_user
                 
                 except Exception as e:
-                    print_colored("❌ Could not return SSO Token or SSO User data.", "red")
+                    print_colored("[ERROR] Could not return SSO Token or SSO User data.", "red")
                     return sso_token, sso_user
                 
             else:
-                print_colored("❌ Could not authenticate with SSO.", "red")
+                print_colored("[ERROR] Could not authenticate with SSO.", "red")
                 return None, None
 
         def authentication_with_api_key_return():
@@ -64,17 +64,17 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
 
             if api_token:
                 try:
-                    print_colored("✅ User authenticated and SDK is now connected to API.", "green")
-                    print_colored("✅ Returning User data.", "green")
+                    print_colored("[OK] User authenticated and SDK is now connected to API.", "green")
+                    print_colored("[OK] Returning User data.", "green")
                     print_colored(f"{user_data}", "blue")
                     return api_key_selected, user_data, api_token
                 
                 except Exception as e:
-                    print_colored("❌ Could not return SSO Token or SSO User data.", "red")
+                    print_colored("[ERROR] Could not return SSO Token or SSO User data.", "red")
                     return api_key_selected, user_data, api_token
                 
             else:
-                print_colored("❌ Could not authenticate with SSO.", "red")
+                print_colored("[ERROR] Could not authenticate with SSO.", "red")
                 return None, None, None
 
         # Argument parser configuration
@@ -91,9 +91,14 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         parser.add_argument("--configure", action="store_true", help="Configure the Corebrain SDK")
         parser.add_argument("--list-configs", action="store_true", help="List available configurations")
         parser.add_argument("--show-schema", action="store_true", help="Display database schema for a configuration")
-        parser.add_argument("--woami",action="store_true",help="Display information about the current user")
+        parser.add_argument("--whoami",action="store_true",help="Display information about the current user")
         parser.add_argument("--gui", action="store_true", help="Check setup and launch the web interface")
         
+
+        # Added after: [ERROR] Error when downloading data about user 'Namespace' object has no attribute 'api_key'
+        parser.add_argument("--api-key", type=str, help="Corebrain API key")
+        parser.add_argument("--token", type=str, help="Corebrain API token")
+
         args = parser.parse_args(argv)
 
         # Common variables
@@ -170,13 +175,13 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     result = sock.connect_ex((host, port))
                     sock.close()
                     if result == 0:
-                        print_colored(f"✅ {service_name} is running on {host}:{port}", "green")
+                        print_colored(f"[OK] {service_name} is running on {host}:{port}", "green")
                         return True
                     else:
-                        print_colored(f"❌ {service_name} is not accessible on {host}:{port}", "red")
+                        print_colored(f"[ERROR] {service_name} is not accessible on {host}:{port}", "red")
                         return False
                 except Exception as e:
-                    print_colored(f"❌ Error checking {service_name}: {str(e)}", "red")
+                    print_colored(f"[ERROR] Error checking {service_name}: {str(e)}", "red")
                     return False
             
             def check_url(url, service_name):
@@ -184,13 +189,13 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 try:
                     response = requests.get(url, timeout=10)
                     if response.status_code < 500:
-                        print_colored(f"✅ {service_name} is accessible at {url}", "green")
+                        print_colored(f"[OK] {service_name} is accessible at {url}", "green")
                         return True
                     else:
-                        print_colored(f"❌ {service_name} returned status {response.status_code} at {url}", "red")
+                        print_colored(f"[ERROR] {service_name} returned status {response.status_code} at {url}", "red")
                         return False
                 except Exception as e:
-                    print_colored(f"❌ {service_name} is not accessible at {url}: {str(e)}", "red")
+                    print_colored(f"[ERROR] {service_name} is not accessible at {url}: {str(e)}", "red")
                     return False
             
             def check_library(library_name, min_version):
@@ -216,18 +221,18 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                         parts = import_name.split('.')
                         spec = importlib.util.find_spec(parts[0])
                         if spec is None:
-                            print_colored(f"❌ {package_name} is not installed", "red")
+                            print_colored(f"[ERROR] {package_name} is not installed", "red")
                             return False
                         # Try to import the full module path
                         try:
                             __import__(import_name)
                         except ImportError:
-                            print_colored(f"❌ {package_name} is not installed", "red")
+                            print_colored(f"[ERROR] {package_name} is not installed", "red")
                             return False
                     else:
                         spec = importlib.util.find_spec(import_name)
                         if spec is None:
-                            print_colored(f"❌ {package_name} is not installed", "red")
+                            print_colored(f"[ERROR] {package_name} is not installed", "red")
                             return False
                     
                     # Try to get version using different methods
@@ -254,23 +259,23 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                             if installed_version is None:
                                 raise Exception("Version not found")
                         
-                        print_colored(f"✅ {package_name} {installed_version} is installed", "green")
+                        print_colored(f"[OK] {package_name} {installed_version} is installed", "green")
                         return True
                         
                     except Exception:
                         # If version check fails, at least we know the module can be imported
-                        print_colored(f"✅ {package_name} is installed (version check failed)", "yellow")
+                        print_colored(f"[OK] {package_name} is installed (version check failed)", "yellow")
                         return True
                     
                 except Exception as e:
-                    print_colored(f"❌ Error checking {package_name}: {str(e)}", "red")
+                    print_colored(f"[ERROR] Error checking {package_name}: {str(e)}", "red")
                     return False
             
             # Determine if in development or production mode
             api_url = os.environ.get("COREBRAIN_API_URL") or DEFAULT_API_URL
             is_development = "localhost" in api_url or "127.0.0.1" in api_url or api_url == DEFAULT_API_URL
             
-            print_colored("🔍 Checking system status...", "blue")
+            print_colored("[SEARCH] Checking system status...", "blue")
             print_colored(f"Mode: {'Development' if is_development else 'Production'}", "blue")
             print_colored(f"API URL: {api_url}", "blue")
             print()
@@ -289,7 +294,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             ]
             
             # Check libraries
-            print_colored("📚 Checking required libraries:", "blue")
+            print_colored("[LIBRARIES] Checking required libraries:", "blue")
             for library in required_libraries:
                 if not check_library(library, library.split('>=')[1] if '>=' in library else None):
                     all_checks_passed = False
@@ -297,7 +302,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             
             # Check services based on mode
             if is_development:
-                print_colored("🔧 Development mode - Checking local services:", "blue")
+                print_colored("[BUILD] Development mode - Checking local services:", "blue")
                 
                 # Check local API server
                 if not check_url(api_url, "API Server"):
@@ -312,7 +317,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     all_checks_passed = False
                     
             else:
-                print_colored("🌐 Production mode - Checking remote services:", "blue")
+                print_colored("[SERVICES] Production mode - Checking remote services:", "blue")
                 
                 # Check production API server
                 if not check_url("https://api.etedata.com", "API Server (Production)"):
@@ -325,10 +330,10 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             
             print()
             if all_checks_passed:
-                print_colored("✅ All system checks passed!", "green")
+                print_colored("[OK] All system checks passed!", "green")
                 return 0
             else:
-                print_colored("❌ Some system checks failed. Please review the issues above.", "red")
+                print_colored("[ERROR] Some system checks failed. Please review the issues above.", "red")
                 return 1
 
         if args.authentication:
@@ -407,10 +412,10 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                 print_colored("Please complete the login process in the browser.", "blue")
                 input("\nPress Enter when you've completed the process or to cancel...")
                 
-                print_colored("✅ SSO authentication test completed!", "green")
+                print_colored("[OK] SSO authentication test completed!", "green")
                 return 0
             except Exception as e:
-                print_colored(f"❌ Error during test: {str(e)}", "red")
+                print_colored(f"[ERROR] Error during test: {str(e)}", "red")
                 return 1
         
 
@@ -446,7 +451,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             sso_token, sso_user = authentication() # Authentica use with SSO
             
             if sso_token and sso_user:
-                print_colored("✅ Enter to create an user and API Key.", "green")
+                print_colored("[OK] Enter to create an user and API Key.", "green")
                 
                 # Get API URL from environment or use default
                 api_url = os.environ.get("COREBRAIN_API_URL", DEFAULT_API_URL)
@@ -489,18 +494,18 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     # Check if the request was successful
                     print("response API: ", response)
                     if response.status_code == 200:
-                        print_colored("✅ User and API Key created successfully!", "green")
+                        print_colored("[OK] User and API Key created successfully!", "green")
                         return 0
                     else:
-                        print_colored(f"❌ Error creating user: {response.text}", "red")
+                        print_colored(f"[ERROR] Error creating user: {response.text}", "red")
                         return 1
                         
                 except requests.exceptions.RequestException as e:
-                    print_colored(f"❌ Error connecting to API: {str(e)}", "red")
+                    print_colored(f"[ERROR] Error connecting to API: {str(e)}", "red")
                     return 1
                 
             else:
-                print_colored("❌ Could not create the user or the API KEY.", "red")
+                print_colored("[ERROR] Could not create the user or the API KEY.", "red")
                 return 1
         
         if args.configure or args.list_configs or args.show_schema:
@@ -785,7 +790,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         #            print_colored(f"Configuration with ID '{args.config_id}' not found", "red")
         #            return 1
                 
-        #        print_colored(f"✅ Validating configuration: {args.config_id}", "blue")
+        #        print_colored(f"[OK] Validating configuration: {args.config_id}", "blue")
                 
                 # Create a temporary Corebrain instance to validate
         #        from corebrain.core.client import Corebrain
@@ -795,16 +800,16 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         #                db_config=config,
         #                skip_verification=True
         #            )
-        #            print_colored("✅ Configuration validation passed!", "green")
+        #            print_colored("[OK] Configuration validation passed!", "green")
         #            print_colored(f"Database type: {config.get('type', 'Unknown')}", "blue")
         #            print_colored(f"Engine: {config.get('engine', 'Unknown')}", "blue")
         #            return 0
         #        except Exception as validation_error:
-        #            print_colored(f"❌ Configuration validation failed: {str(validation_error)}", "red")
+        #            print_colored(f"[ERROR] Configuration validation failed: {str(validation_error)}", "red")
         #            return 1
                     
         #    except Exception as e:
-        #        print_colored(f"❌ Error during validation: {str(e)}", "red")
+        #        print_colored(f"[ERROR] Error during validation: {str(e)}", "red")
         #        return 1
 
         #if args.export_config:
@@ -882,15 +887,15 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         #        with open(output_file, 'w', encoding='utf-8') as f:
         #            json.dump(config, f, indent=2, default=str)
                 
-        #        print_colored(f"✅ Configuration exported to: {output_file}", "green")
+        #        print_colored(f"[OK] Configuration exported to: {output_file}", "green")
         #        return 0
                 
         #    except Exception as e:
-        #        print_colored(f"❌ Error exporting configuration: {str(e)}", "red")
+        #        print_colored(f"[ERROR] Error exporting configuration: {str(e)}", "red")
         #        return 1
 
 
-        if args.woami:
+        if args.whoami:
             """
             Display information about the currently authenticated user.
             
@@ -906,7 +911,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
             4. COREBRAIN_API_TOKEN environment variable
             5. SSO authentication (if no other credentials found)
             
-            Usage: corebrain --woami [--api-key <key>] [--token <token>] [--sso-url <url>]
+            Usage: corebrain --whoami [--api-key <key>] [--token <token>] [--sso-url <url>]
             
             Information displayed:
             - User ID and email
@@ -936,12 +941,12 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
                     for k, v in user_data.items():
                         print(f"{k}: {v}")
                 else:
-                    print_colored("❌ Can't find data about user, be sure that you are logged into  --login.", "red")
+                    print_colored("[ERROR] Can't find data about user, be sure that you are logged into  --login.", "red")
                     return 1
 
                 return 0
             except Exception as e:
-                print_colored(f"❌ Error when downloading data about user {str(e)}", "red")
+                print_colored(f"[ERROR] Error when downloading data about user {str(e)}", "red")
                 return 1
 
         if args.gui:
@@ -1065,7 +1070,7 @@ def main_cli(argv: Optional[List[str]] = None) -> int:
         else:
             # If no option was specified, show help
             parser.print_help()
-            print_colored("\nTip: Use 'corebrain --login' to login via SSO.", "blue")
+            print_colored("\nTip: Use 'corebrain --authentication' to login via SSO.", "blue")
         
         return 0
     except Exception as e:

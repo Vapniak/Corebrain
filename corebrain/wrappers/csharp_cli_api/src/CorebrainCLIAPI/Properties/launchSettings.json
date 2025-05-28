@@ -8,7 +8,7 @@
       "applicationUrl": "http://localhost:5140",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      } 
     },
     "https": {
       "commandName": "Project",
@@ -17,6 +17,13 @@
       "applicationUrl": "https://localhost:7261;http://localhost:5140",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Interactive": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Interactive",
+        "SESSION_TIMEOUT": "600"
       }
     }
   }

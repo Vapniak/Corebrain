@@ -125,7 +125,7 @@ def fetch_api_keys(api_url: str, api_token: str, user_data: Dict[str, Any]) -> O
                             
                             # Verify if the key is active
                             if selected_key.get('active') != True:
-                                print_colored("⚠️ The selected API key is not active. Select another one.", "yellow")
+                                print_colored("[WARN] The selected API key is not active. Select another one.", "yellow")
                                 continue
                             
                             # Get information of the selected key
@@ -133,10 +133,10 @@ def fetch_api_keys(api_url: str, api_token: str, user_data: Dict[str, Any]) -> O
                             key_value = selected_key.get('key', None)
                             
                             if not key_value:
-                                print_colored("⚠️ The selected API key does not have a valid value.", "yellow")
+                                print_colored("[WARN] The selected API key does not have a valid value.", "yellow")
                                 continue
                                 
-                            print_colored(f"✅ You selected: {key_name}", "green")
+                            print_colored(f"[OK] You selected: {key_name}", "green")
                             print_colored("Wait while we assign the API key to your SDK...", "yellow")
                             
                             return key_value
@@ -216,7 +216,7 @@ def get_api_key_id_from_token(sso_token: str, api_token: str, api_url: str) -> O
             key_id = key_data.get("id")
             return key_id
         else:
-            print_colored("⚠️ Could not find the API key ID", "yellow")
+            print_colored("[WARN] Could not find the API key ID", "yellow")
             return None
             
     except Exception as e:
@@ -269,7 +269,7 @@ def exchange_sso_token_for_api_token(api_url: str, sso_token: str, user_data: Di
                     print_colored("The response does not contain a valid API token", "red")
                     return None
                 
-                print_colored("✅ API token successfully obtained", "green")
+                print_colored("[OK] API token successfully obtained", "green")
                 return api_token
             except Exception as e:
                 print_colored(f"Error processing JSON response: {str(e)}", "red")

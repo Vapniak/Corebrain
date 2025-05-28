@@ -15,6 +15,8 @@ public class CommandController : ControllerBase {
 
   public CommandController(IOptions<CorebrainSettings> settings) {
     var config = settings.Value;
+    var pythonPath = config.PythonPath ?? "python";
+    var scriptPath = config.ScriptPath ?? "corebrain";
     _corebrain = new CorebrainCS(
         config.PythonPath,
         config.ScriptPath,
@@ -50,10 +52,10 @@ public class CommandController : ControllerBase {
 
     try {
       var result = _corebrain.ExecuteCommand(request.Arguments);
-      return Ok(result);
+      return Ok(new { output = result });
     }
     catch (Exception ex) {
-      return StatusCode(500, $"Error executing command: {ex.Message}");
+      return StatusCode(500, new { error = ex.Message });
     }
   }
 

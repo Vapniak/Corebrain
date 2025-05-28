@@ -67,7 +67,7 @@ def extract_db_schema(db_config: Dict[str, Any]) -> Dict[str, Any]:
                 # Get the database
                 db_name = db_config.get("database", "")
                 if not db_name:
-                    _print_colored("⚠️ Database name not specified", "yellow")
+                    _print_colored("[WARN] Database name not specified", "yellow")
                     return schema
                 
                 try:
@@ -308,9 +308,9 @@ def extract_schema_to_file(api_key: str, config_id: Optional[str] = None, output
         try:
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(schema, f, indent=2, default=str)
-            _print_colored(f"✅ Schema extracted and saved in: {output_path}", "green")
+            _print_colored(f"[OK] Schema extracted and saved in: {output_path}", "green")
         except Exception as e:
-            _print_colored(f"❌ Error saving the file: {str(e)}", "red")
+            _print_colored(f"[ERROR] Error saving the file: {str(e)}", "red")
             return False
             
         # Show a summary of the tables/collections found
@@ -323,7 +323,7 @@ def extract_schema_to_file(api_key: str, config_id: Optional[str] = None, output
         return True
         
     except Exception as e:
-        _print_colored(f"❌ Error extracting schema: {str(e)}", "red")
+        _print_colored(f"[ERROR] Error extracting schema: {str(e)}", "red")
         return False
 
 def show_db_schema(api_token: str, config_id: Optional[str] = None, api_url: Optional[str] = None) -> None:
@@ -535,7 +535,7 @@ def show_db_schema(api_token: str, config_id: Optional[str] = None, api_url: Opt
                     if len(sample_data) > 2:
                         print(f"  ... ({len(sample_data) - 2} more documents)")
         
-        _print_colored("\n✅ Schema extracted correctly!", "green")
+        _print_colored("\n[OK] Schema extracted correctly!", "green")
         
         # Ask if you want to save the schema in a file
         save_option = input("\nDo you want to save the schema in a file? (s/n): ").strip().lower()
@@ -544,12 +544,12 @@ def show_db_schema(api_token: str, config_id: Optional[str] = None, api_url: Opt
             try:
                 with open(filename, 'w') as f:
                     json.dump(schema, f, indent=2, default=str)
-                _print_colored(f"\n✅ Schema saved in: {filename}", "green")
+                _print_colored(f"\n[OK] Schema saved in: {filename}", "green")
             except Exception as e:
-                _print_colored(f"❌ Error saving the file: {str(e)}", "red")
+                _print_colored(f"[ERROR] Error saving the file: {str(e)}", "red")
     
     except Exception as e:
-        _print_colored(f"❌ Error showing the schema: {str(e)}", "red")
+        _print_colored(f"[ERROR] Error showing the schema: {str(e)}", "red")
         import traceback
         traceback.print_exc()
 

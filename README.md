@@ -47,7 +47,7 @@ pip install -e .
 
 ### Initialization
 
-> **⚠️ IMPORTANT:**  
+> **[WARN] IMPORTANT:**  
 > * If you don't have an existing configuration, first run `corebrain --configure`
 > * If you need to generate a new API key, use `corebrain --create`
 > * Never share your API key in public repositories. Use environment variables instead.

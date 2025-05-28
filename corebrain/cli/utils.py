@@ -374,7 +374,7 @@ class ProgressTracker:
         
         elapsed = time.time() - self.start_time
         msg = message or f"{self.current_task} completed"
-        print_colored(f"✅ {msg} in {elapsed:.2f}s", "green")
+        print_colored(f"[OK] {msg} in {elapsed:.2f}s", "green")
         
         self.reset()
     
@@ -393,7 +393,7 @@ class ProgressTracker:
         
         elapsed = time.time() - self.start_time
         msg = message or f"{self.current_task} failed"
-        print_colored(f"❌ {msg} after {elapsed:.2f}s", "red")
+        print_colored(f"[ERROR] {msg} after {elapsed:.2f}s", "red")
         
         self.reset()
     

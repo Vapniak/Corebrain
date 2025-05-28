@@ -126,16 +126,16 @@ def test_natural_language_query(api_token: str, db_config: Dict[str, Any], api_u
                     print_colored("\nResponse:", "green")
                     print(result["explanation"])
                     
-                    print_colored("\n✅ Query test successful!", "green")
+                    print_colored("\n[OK] Query test successful!", "green")
                     return True
                 else:
                     # If there is no explanation but the API responds, it may be a different format
                     print_colored("\nRespuesta recibida del API (formato diferente al esperado):", "yellow")
                     print(json.dumps(result, indent=2))
-                    print_colored("\n⚠️ The API responded, but with a different format than expected.", "yellow")
+                    print_colored("\n[WARN] The API responded, but with a different format than expected.", "yellow")
                     return True
             else:
-                print_colored(f"❌ Error in response: Code {response.status_code}", "red")
+                print_colored(f"[ERROR] Error in response: Code {response.status_code}", "red")
                 try:
                     error_data = response.json()
                     print(json.dumps(error_data, indent=2))
@@ -144,14 +144,14 @@ def test_natural_language_query(api_token: str, db_config: Dict[str, Any], api_u
                 return False
                 
         except http_session.TimeoutException:
-            print_colored("⚠️ Timeout while performing query. The API may be busy or unavailable.", "yellow")
+            print_colored("[WARN] Timeout while performing query. The API may be busy or unavailable.", "yellow")
             print_colored("This does not affect the saved configuration.", "yellow")
             return False
         except http_session.RequestError as e:
-            print_colored(f"⚠️ Connection error: {str(e)}", "yellow")
+            print_colored(f"[WARN] Connection error: {str(e)}", "yellow")
             print_colored("Check the API URL and your internet connection.", "yellow")
             return False
             
     except Exception as e:
-        print_colored(f"❌ Error performing query: {str(e)}", "red")
+        print_colored(f"[ERROR] Error performing query: {str(e)}", "red")
         return False
